@@ -649,10 +649,9 @@ export default function Dashboard() {
                     <p className="text-xl font-medium mb-2 text-foreground">
                       No tasks yet!
                     </p>
-                    <p className="text-muted-foreground mb-6">
+                    <p className="text-muted-foreground">
                       Create your first task to get organized.
                     </p>
-                    <CreateTaskDialog onTaskCreated={fetchData} />
                   </div>
                 )}
               </>
