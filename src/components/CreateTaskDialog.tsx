@@ -73,6 +73,12 @@ export const CreateTaskDialog = ({ onTaskCreated }: CreateTaskDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="w-full">
+          <Plus className="w-4 h-4 mr-2" />
+          New Task
+        </Button>
+      </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
