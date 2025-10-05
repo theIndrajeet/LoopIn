@@ -405,10 +405,9 @@ export default function Dashboard() {
                 <p className="text-xl font-medium mb-2 text-foreground">
                   Your first habit is the hardest—let's make it easy.
                 </p>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-muted-foreground">
                   Start with one small habit and watch your progress grow.
                 </p>
-                <CreateHabitDialog onHabitCreated={fetchData} />
               </div>
             )}
           </>
