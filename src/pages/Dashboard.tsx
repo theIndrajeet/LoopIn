@@ -23,10 +23,16 @@ import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSo
 import { SortableHabitCard } from "@/components/SortableHabitCard";
 import { SortableTaskCard } from "@/components/SortableTaskCard";
 import { isToday, isPast } from "date-fns";
+import { Lightbulb } from "lucide-react";
+import { QuickPicksSection } from "@/components/QuickPicksSection";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { timezone } = useUserTimezone();
+  const isMobile = useIsMobile();
   const [habits, setHabits] = useState<any[]>([]);
   const [todaysLogs, setTodaysLogs] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
@@ -37,6 +43,7 @@ export default function Dashboard() {
   const [showAllDoneBanner, setShowAllDoneBanner] = useState(false);
   const [showFAB, setShowFAB] = useState(false);
   const [celebrationData, setCelebrationData] = useStateForCelebrations<CelebrationDetail | null>(null);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   
   // Task-specific state
   const [tasks, setTasks] = useState<any[]>([]);
@@ -241,6 +248,22 @@ export default function Dashboard() {
     }
   };
 
+  const handleOpenSuggestions = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Track impression
+    await supabase.from("suggestion_events").insert({
+      user_id: user.id,
+      suggestion_type: "quick_pick",
+      action: "suggest_impression",
+      suggestion_id: "header_button",
+      metadata: { placement: "header" }
+    });
+
+    setSuggestionsOpen(true);
+  };
+
   // Task stats calculations
   const tasksDueToday = tasks.filter(t => t.due_date && isToday(new Date(t.due_date)) && !t.completed).length;
   const completedTasks = tasks.filter(t => t.completed).length;
@@ -390,7 +413,19 @@ export default function Dashboard() {
                   </TabsList>
                 </Tabs>
               </div>
-              {viewMode === "active" && <CreateHabitDialog onHabitCreated={fetchData} />}
+              {viewMode === "active" && (
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleOpenSuggestions}
+                    className="gap-2"
+                  >
+                    <Lightbulb className="w-4 h-4" />
+                    <span className="hidden sm:inline">Try this</span>
+                  </Button>
+                  <CreateHabitDialog onHabitCreated={fetchData} />
+                </div>
+              )}
             </div>
 
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="sm:hidden mb-4">
@@ -725,6 +760,53 @@ export default function Dashboard() {
         meta={celebrationData?.meta}
         onDismiss={() => setCelebrationData(null)}
       />
+
+      {/* Suggestions Sheet/Drawer */}
+      {isMobile ? (
+        <Drawer open={suggestionsOpen} onOpenChange={setSuggestionsOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-primary" />
+                Quick Picks for You
+              </DrawerTitle>
+              <DrawerDescription>
+                AI-powered habit suggestions tailored to your goals
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4 pb-6 max-h-[70vh] overflow-y-auto">
+              <QuickPicksSection 
+                onHabitCreated={() => {
+                  fetchData();
+                  setSuggestionsOpen(false);
+                }} 
+              />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Sheet open={suggestionsOpen} onOpenChange={setSuggestionsOpen}>
+          <SheetContent className="sm:max-w-md overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-primary" />
+                Quick Picks for You
+              </SheetTitle>
+              <SheetDescription>
+                AI-powered habit suggestions tailored to your goals
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-6">
+              <QuickPicksSection 
+                onHabitCreated={() => {
+                  fetchData();
+                  setSuggestionsOpen(false);
+                }} 
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }
