@@ -184,19 +184,20 @@ export default function Leaderboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 sm:p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-background p-4 sm:p-6 pb-20 md:pb-6">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate("/dashboard")}
+            className="md:hidden"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Leaderboard</h1>
-            <p className="text-muted-foreground">Compete with others and climb the ranks</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Leaderboard</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Compete with others and climb the ranks</p>
           </div>
         </div>
 

@@ -91,7 +91,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
     <>
       <Card
         onClick={() => setDialogOpen(true)}
-        className="p-5 bg-card border border-border hover:border-primary transition-all duration-200 hover:scale-[1.02] hover:shadow-glow-primary cursor-pointer"
+        className="p-4 sm:p-5 bg-card border border-border hover:border-primary transition-all duration-200 active:scale-[0.98] sm:hover:scale-[1.02] hover:shadow-glow-primary cursor-pointer touch-manipulation"
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
@@ -110,11 +110,11 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
           </Badge>
         </div>
 
-        <div className="flex items-center gap-1 mb-4">
+        <div className="flex items-center gap-0.5 sm:gap-1 mb-4">
           {last7Days.map((completed, idx) => (
             <div
               key={idx}
-              className={`w-6 h-6 rounded-full transition-colors ${
+              className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full transition-colors ${
                 completed ? "bg-success" : "bg-card border border-border/50"
               }`}
             />

@@ -114,15 +114,15 @@ export const CreateHabitDialog = ({ onHabitCreated }: CreateHabitDialogProps) =>
           New Habit
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl bg-popover border-border">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto bg-popover border-border">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Create a new habit</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-xl sm:text-2xl">Create a new habit</DialogTitle>
+          <DialogDescription className="text-sm sm:text-base">
             Choose something you want to do daily to build a strong streak.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex gap-2 mb-4">
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
           <Button variant="secondary" onClick={showQuickPicks} disabled={loadingAI} className="flex-1">
             <Lightbulb className="w-4 h-4 mr-2" />
             Quick Picks
