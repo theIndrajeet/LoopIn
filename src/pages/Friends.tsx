@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, UserPlus, Check, X, Search, ArrowLeft, Flame, UserMinus } from "lucide-react";
 import { InviteFriendsDialog } from "@/components/InviteFriendsDialog";
+import { ActivityFeed } from "@/components/ActivityFeed";
 import { toast } from "sonner";
 
 interface Profile {
@@ -253,7 +254,7 @@ export default function Friends() {
         </Card>
 
         <Tabs defaultValue="friends" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="friends">
               Friends ({friends.length})
             </TabsTrigger>
@@ -262,6 +263,9 @@ export default function Friends() {
             </TabsTrigger>
             <TabsTrigger value="sent">
               Sent ({sentRequests.length})
+            </TabsTrigger>
+            <TabsTrigger value="activity">
+              Activity
             </TabsTrigger>
           </TabsList>
 
@@ -365,6 +369,12 @@ export default function Friends() {
                 </Card>
               ))
             )}
+          </TabsContent>
+
+          <TabsContent value="activity" className="mt-6">
+            <Card className="p-6">
+              <ActivityFeed />
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
