@@ -3,6 +3,7 @@ import { CheckCircle2, Trophy, Users, User, LogOut, Zap, Sparkles, Bell } from "
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { NotificationsList } from "./NotificationsList";
 import {
   Sheet,
   SheetContent,
@@ -102,6 +103,28 @@ export const MobileNav = () => {
     }
   };
 
+  const markAllAsRead = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return;
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', session.session.user.id)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error marking notifications as read:', error);
+        return;
+      }
+
+      await fetchUnreadCount();
+    } catch (error) {
+      console.error('Error in markAllAsRead:', error);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -176,7 +199,12 @@ export const MobileNav = () => {
           <span className={`text-[10px] font-medium transition-all ${isActive("/friends") ? "opacity-100" : "opacity-60"}`}>Friends</span>
         </button>
 
-        <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+        <Sheet open={notificationsOpen} onOpenChange={(open) => {
+          setNotificationsOpen(open);
+          if (open) {
+            markAllAsRead();
+          }
+        }}>
           <SheetTrigger asChild>
             <button
               className="relative flex flex-col items-center gap-0.5 min-w-[52px] transition-all duration-300 text-muted-foreground py-1"
@@ -200,7 +228,7 @@ export const MobileNav = () => {
               <SheetTitle>Notifications</SheetTitle>
             </SheetHeader>
             <div className="mt-4">
-              {/* Notifications list will be imported */}
+              <NotificationsList onNotificationRead={fetchUnreadCount} />
             </div>
           </SheetContent>
         </Sheet>
