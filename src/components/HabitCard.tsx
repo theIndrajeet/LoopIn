@@ -522,7 +522,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
             </Badge>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button variant="ghost" size="icon" className="h-8 w-8" onPointerDown={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()}>
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -564,6 +564,9 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
             <Button
               type="button"
               onClick={handleComplete}
+              onPointerDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
               disabled={isCompletedToday || loading}
               variant={isCompletedToday ? "secondary" : "default"}
               size="sm"
@@ -599,7 +602,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
           dragElastic={0.2}
           onDrag={(_, info) => setDragX(info.offset.x)}
           onDragEnd={handleDragEnd}
-          onClick={() => dragX === 0 && setDialogOpen(true)}
+          onClick={() => Math.abs(dragX) < 8 && setDialogOpen(true)}
         >
           {cardContent}
         </motion.div>
