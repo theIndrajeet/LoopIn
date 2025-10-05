@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Trophy, Users, Crown, Medal, Award, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import { UserProfileDialog } from "@/components/UserProfileDialog";
 
 interface LeaderboardUser {
   id: string;
@@ -23,6 +24,8 @@ export default function Leaderboard() {
   const [friendsLeaderboard, setFriendsLeaderboard] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -161,6 +164,11 @@ export default function Leaderboard() {
     return <Badge variant="outline">#{rank}</Badge>;
   };
 
+  const handleUserClick = (userId: string) => {
+    setSelectedUserId(userId);
+    setProfileDialogOpen(true);
+  };
+
   const renderLeaderboard = (users: LeaderboardUser[], emptyMessage: string) => {
     if (loading) {
       return (
@@ -186,7 +194,8 @@ export default function Leaderboard() {
         {users.map((user) => (
           <Card
             key={user.id}
-            className={`p-4 transition-all hover:scale-[1.02] ${
+            onClick={() => handleUserClick(user.id)}
+            className={`p-4 transition-all hover:scale-[1.02] cursor-pointer ${
               user.id === currentUserId
                 ? "border-primary bg-primary/5"
                 : "bg-surface/50"
@@ -274,6 +283,14 @@ export default function Leaderboard() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {selectedUserId && (
+        <UserProfileDialog
+          userId={selectedUserId}
+          open={profileDialogOpen}
+          onOpenChange={setProfileDialogOpen}
+        />
+      )}
     </div>
   );
 }

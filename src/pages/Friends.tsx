@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, UserPlus, Check, X, Search, ArrowLeft, Flame, UserMinus } from "lucide-react";
 import { InviteFriendsDialog } from "@/components/InviteFriendsDialog";
 import { ActivityFeed } from "@/components/ActivityFeed";
+import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { toast } from "sonner";
 
 interface Profile {
@@ -28,6 +29,8 @@ export default function Friends() {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -229,6 +232,11 @@ export default function Friends() {
     }
   };
 
+  const handleUserClick = (userId: string) => {
+    setSelectedUserId(userId);
+    setProfileDialogOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
       <div className="max-w-4xl mx-auto space-y-6">
@@ -263,7 +271,11 @@ export default function Friends() {
           {searchResults.length > 0 && (
             <div className="mt-4 space-y-2">
               {searchResults.map((user) => (
-                <div key={user.id} className="flex items-center justify-between p-3 bg-surface rounded-lg">
+                <div 
+                  key={user.id} 
+                  onClick={() => handleUserClick(user.id)}
+                  className="flex items-center justify-between p-3 bg-surface rounded-lg cursor-pointer hover:bg-accent/50 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarImage src={user.avatar_url || undefined} />
@@ -274,7 +286,13 @@ export default function Friends() {
                       <p className="text-sm text-muted-foreground">{user.total_xp} XP</p>
                     </div>
                   </div>
-                  <Button size="sm" onClick={() => sendFriendRequest(user.id)}>
+                  <Button 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      sendFriendRequest(user.id);
+                    }}
+                  >
                     <UserPlus className="h-4 w-4 mr-2" />
                     Add
                   </Button>
@@ -309,7 +327,11 @@ export default function Friends() {
               </div>
             ) : (
               friends.map((friend) => (
-                <Card key={friend.id} className="p-4">
+                <Card 
+                  key={friend.id} 
+                  onClick={() => handleUserClick(friend.id)}
+                  className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -327,7 +349,10 @@ export default function Friends() {
                     <Button 
                       variant="ghost" 
                       size="sm"
-                      onClick={() => removeFriend(friend.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFriend(friend.id);
+                      }}
                     >
                       <UserMinus className="h-4 w-4" />
                     </Button>
@@ -344,7 +369,11 @@ export default function Friends() {
               </div>
             ) : (
               pendingRequests.map((request) => (
-                <Card key={request.id} className="p-4">
+                <Card 
+                  key={request.id} 
+                  onClick={() => handleUserClick(request.id)}
+                  className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -356,7 +385,7 @@ export default function Friends() {
                         <p className="text-sm text-muted-foreground">{request.total_xp} XP</p>
                       </div>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button 
                         size="sm" 
                         onClick={() => acceptRequest(request.id)}
@@ -384,7 +413,11 @@ export default function Friends() {
               </div>
             ) : (
               sentRequests.map((request) => (
-                <Card key={request.id} className="p-4">
+                <Card 
+                  key={request.id} 
+                  onClick={() => handleUserClick(request.id)}
+                  className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                >
                   <div className="flex items-center gap-3">
                     <Avatar>
                       <AvatarImage src={request.avatar_url || undefined} />
@@ -409,6 +442,14 @@ export default function Friends() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {selectedUserId && (
+        <UserProfileDialog
+          userId={selectedUserId}
+          open={profileDialogOpen}
+          onOpenChange={setProfileDialogOpen}
+        />
+      )}
     </div>
   );
 }
