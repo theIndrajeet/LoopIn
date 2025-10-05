@@ -14,6 +14,58 @@ export type Database = {
   }
   public: {
     Tables: {
+      friendships: {
+        Row: {
+          created_at: string
+          friend_id: string
+          id: string
+          requester_id: string
+          status: Database["public"]["Enums"]["friendship_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          friend_id: string
+          id?: string
+          requester_id: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          friend_id?: string
+          id?: string
+          requester_id?: string
+          status?: Database["public"]["Enums"]["friendship_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_friend_id_fkey"
+            columns: ["friend_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requester_id_fkey"
+            columns: ["requester_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       habit_logs: {
         Row: {
           completed_at: string | null
@@ -254,9 +306,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_friend_request: {
+        Args: { friend_user_id: string }
+        Returns: undefined
+      }
+      reject_friend_request: {
+        Args: { friend_user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
+      friendship_status: "pending" | "accepted" | "rejected"
       habit_difficulty: "easy" | "medium" | "hard"
       privacy_level: "public" | "friends" | "private"
     }
@@ -386,6 +446,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      friendship_status: ["pending", "accepted", "rejected"],
       habit_difficulty: ["easy", "medium", "hard"],
       privacy_level: ["public", "friends", "private"],
     },

@@ -8,6 +8,7 @@ import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Leaderboard from "./pages/Leaderboard";
 import Friends from "./pages/Friends";
+import InviteLanding from "./pages/InviteLanding";
 import NotFound from "./pages/NotFound";
 import { MobileNav } from "@/components/MobileNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
@@ -26,6 +27,7 @@ const App = () => (
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/friends" element={<Friends />} />
+        <Route path="/invite/:userId" element={<InviteLanding />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <MobileNav />
