@@ -342,7 +342,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
       
       <Card
         onClick={() => !isMobile && setDialogOpen(true)}
-        className="p-4 sm:p-5 bg-card border border-border hover:border-primary transition-all duration-200 active:scale-[0.98] sm:hover:scale-[1.02] hover:shadow-glow-primary cursor-pointer touch-manipulation"
+        className="p-4 sm:p-5 bg-card/60 backdrop-blur-medium border border-border/40 hover:border-primary/60 hover:bg-card/80 transition-all duration-300 active:scale-[0.98] sm:hover:scale-[1.01] hover:shadow-elevated cursor-pointer touch-manipulation group"
       >
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">

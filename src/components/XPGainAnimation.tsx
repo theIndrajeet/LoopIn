@@ -26,7 +26,7 @@ export const XPGainAnimation = ({ show, xp, onComplete }: XPGainProps) => {
           onAnimationComplete={onComplete}
           className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-none"
         >
-          <div className="flex items-center gap-2 bg-gold/20 border-2 border-gold rounded-full px-6 py-3 backdrop-blur-sm">
+          <div className="flex items-center gap-2 bg-gold/10 border-2 border-gold/40 rounded-2xl px-8 py-4 backdrop-blur-medium shadow-glow-gold">
             <Sparkles className="w-6 h-6 text-gold animate-spin" />
             <span className="text-2xl font-bold text-gold">
               +{xp} XP

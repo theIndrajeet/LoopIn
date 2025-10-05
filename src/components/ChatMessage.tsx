@@ -17,16 +17,16 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
   return (
     <div
       className={cn(
-        "flex w-full mb-4",
+        "flex w-full mb-4 animate-fade-up",
         isUser ? "justify-end" : "justify-start"
       )}
     >
       <div
         className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm",
+          "max-w-[80%] rounded-2xl px-4 py-3 shadow-soft backdrop-blur-subtle transition-all duration-300",
           isUser
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted text-foreground"
+            ? "bg-primary/90 text-primary-foreground"
+            : "bg-card/70 text-foreground border border-border/40"
         )}
       >
         <p className="text-sm whitespace-pre-wrap break-words">

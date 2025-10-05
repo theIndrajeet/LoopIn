@@ -26,9 +26,9 @@ export const TodayProgressRing = ({ completed, total }: TodayProgressRingProps) 
           cy="70"
           r={radius}
           stroke="hsl(var(--muted))"
-          strokeWidth="10"
+          strokeWidth="12"
           fill="none"
-          opacity="0.2"
+          opacity="0.15"
         />
         
         {/* Progress circle */}
@@ -36,8 +36,8 @@ export const TodayProgressRing = ({ completed, total }: TodayProgressRingProps) 
           cx="70"
           cy="70"
           r={radius}
-          stroke="hsl(var(--primary))"
-          strokeWidth="10"
+          stroke="url(#gradient)"
+          strokeWidth="12"
           fill="none"
           strokeDasharray={circumference}
           strokeDashoffset={prefersReducedMotion ? strokeDashoffset : circumference}
@@ -47,10 +47,19 @@ export const TodayProgressRing = ({ completed, total }: TodayProgressRingProps) 
             strokeDashoffset: strokeDashoffset 
           }}
           transition={{ 
-            duration: prefersReducedMotion ? 0 : 0.6, 
-            ease: "easeOut" 
+            duration: prefersReducedMotion ? 0 : 0.8, 
+            ease: [0.34, 1.56, 0.64, 1]
           }}
+          style={{ filter: 'drop-shadow(0 0 8px hsl(var(--primary) / 0.4))' }}
         />
+        
+        {/* Gradient definition */}
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="hsl(var(--primary))" />
+            <stop offset="100%" stopColor="hsl(356 90% 60%)" />
+          </linearGradient>
+        </defs>
         
         {/* Center text */}
         <text

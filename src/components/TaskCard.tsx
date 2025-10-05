@@ -36,7 +36,7 @@ export const TaskCard = ({ task, onComplete, onDelete, onClick }: TaskCardProps)
   };
 
   return (
-    <Card className="p-4 hover:shadow-md transition-shadow">
+    <Card className="p-4 bg-card/60 backdrop-blur-medium border-border/40 hover:border-primary/40 hover:bg-card/80 hover:shadow-elevated transition-all duration-300 group">
       <div className="flex items-start gap-3">
         <Checkbox
           checked={task.completed}

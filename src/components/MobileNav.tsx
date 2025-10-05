@@ -64,60 +64,84 @@ export const MobileNav = () => {
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-elevated border-t border-border md:hidden z-50 safe-area-inset-bottom">
+    <nav className="fixed bottom-4 left-4 right-4 bg-elevated/80 backdrop-blur-heavy border border-border/40 rounded-3xl shadow-elevated md:hidden z-50 mx-auto max-w-md">
       <div className="flex justify-around items-center h-16 px-2">
         <button
           onClick={() => navigate("/dashboard")}
-          className={`flex flex-col items-center gap-1 min-w-[52px] transition-colors ${
+          className={`relative flex flex-col items-center gap-0.5 min-w-[52px] transition-all duration-300 py-1 ${
             isActive("/dashboard") ? "text-primary" : "text-muted-foreground"
           }`}
         >
-          <CheckCircle2 className="w-6 h-6" />
-          <span className="text-xs font-medium">Habits</span>
+          {isActive("/dashboard") && (
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary animate-pulse-glow" />
+          )}
+          <div className={`p-2 rounded-2xl transition-all duration-300 ${isActive("/dashboard") ? "bg-primary/10 scale-110" : ""}`}>
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <span className={`text-[10px] font-medium transition-all ${isActive("/dashboard") ? "opacity-100" : "opacity-60"}`}>Habits</span>
         </button>
         
         <button
           onClick={() => navigate("/ai-assistant")}
-          className={`flex flex-col items-center gap-1 min-w-[52px] transition-colors ${
+          className={`relative flex flex-col items-center gap-0.5 min-w-[52px] transition-all duration-300 py-1 ${
             isActive("/ai-assistant") ? "text-primary" : "text-muted-foreground"
           }`}
         >
-          <Sparkles className="w-6 h-6" />
-          <span className="text-xs font-medium">AI</span>
+          {isActive("/ai-assistant") && (
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary animate-pulse-glow" />
+          )}
+          <div className={`p-2 rounded-2xl transition-all duration-300 ${isActive("/ai-assistant") ? "bg-primary/10 scale-110" : ""}`}>
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <span className={`text-[10px] font-medium transition-all ${isActive("/ai-assistant") ? "opacity-100" : "opacity-60"}`}>AI</span>
         </button>
         
         <button
           onClick={() => navigate("/leaderboard")}
-          className={`flex flex-col items-center gap-1 min-w-[52px] transition-colors ${
+          className={`relative flex flex-col items-center gap-0.5 min-w-[52px] transition-all duration-300 py-1 ${
             isActive("/leaderboard") ? "text-primary" : "text-muted-foreground"
           }`}
         >
-          <Trophy className="w-6 h-6" />
-          <span className="text-xs font-medium">Rankings</span>
+          {isActive("/leaderboard") && (
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary animate-pulse-glow" />
+          )}
+          <div className={`p-2 rounded-2xl transition-all duration-300 ${isActive("/leaderboard") ? "bg-primary/10 scale-110" : ""}`}>
+            <Trophy className="w-5 h-5" />
+          </div>
+          <span className={`text-[10px] font-medium transition-all ${isActive("/leaderboard") ? "opacity-100" : "opacity-60"}`}>Ranks</span>
         </button>
         
         <button
           onClick={() => navigate("/friends")}
-          className={`flex flex-col items-center gap-1 min-w-[52px] transition-colors ${
+          className={`relative flex flex-col items-center gap-0.5 min-w-[52px] transition-all duration-300 py-1 ${
             isActive("/friends") ? "text-primary" : "text-muted-foreground"
           }`}
         >
-          <Users className="w-6 h-6" />
-          <span className="text-xs font-medium">Friends</span>
+          {isActive("/friends") && (
+            <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary animate-pulse-glow" />
+          )}
+          <div className={`p-2 rounded-2xl transition-all duration-300 ${isActive("/friends") ? "bg-primary/10 scale-110" : ""}`}>
+            <Users className="w-5 h-5" />
+          </div>
+          <span className={`text-[10px] font-medium transition-all ${isActive("/friends") ? "opacity-100" : "opacity-60"}`}>Friends</span>
         </button>
 
-        <div className="flex flex-col items-center gap-1 min-w-[52px]">
-          <NotificationBell />
-          <span className="text-xs font-medium text-muted-foreground">Alerts</span>
+        <div className="flex flex-col items-center gap-0.5 min-w-[52px] py-1">
+          <div className="p-2">
+            <NotificationBell />
+          </div>
+          <span className="text-[10px] font-medium text-muted-foreground opacity-60">Alerts</span>
         </div>
         
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <button
-              className="flex flex-col items-center gap-1 min-w-[52px] transition-colors text-muted-foreground"
+              className="flex flex-col items-center gap-0.5 min-w-[52px] transition-all duration-300 text-muted-foreground py-1"
             >
-              <User className="w-6 h-6" />
-              <span className="text-xs font-medium">Profile</span>
+              <div className="p-2">
+                <User className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-medium opacity-60">Profile</span>
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-[85vh] overflow-y-auto">
