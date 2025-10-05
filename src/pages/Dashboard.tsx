@@ -212,27 +212,27 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-          <Card className="p-4 sm:p-6 bg-card border-border hover:border-primary transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-primary" />
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
+          <Card className="p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                <Zap className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <div>
-                <p className="text-3xl font-bold text-foreground">{profile?.total_xp || 0}</p>
-                <p className="text-sm text-muted-foreground">Total XP</p>
+              <div className="text-center sm:text-left">
+                <p className="text-xl sm:text-3xl font-bold text-foreground">{profile?.total_xp || 0}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total XP</p>
               </div>
             </div>
           </Card>
 
-          <Card className="p-4 sm:p-6 bg-card border-border hover:border-primary transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gold/20 flex items-center justify-center">
-                <Flame className="w-6 h-6 text-gold" />
+          <Card className="p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+              <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-gold/20 flex items-center justify-center shrink-0">
+                <Flame className="w-4 h-4 sm:w-6 sm:h-6 text-gold" />
               </div>
-              <div>
-                <p className="text-3xl font-bold text-foreground">{totalStreaks}</p>
-                <p className="text-sm text-muted-foreground">Active Streaks</p>
+              <div className="text-center sm:text-left">
+                <p className="text-xl sm:text-3xl font-bold text-foreground">{totalStreaks}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Active Streaks</p>
               </div>
             </div>
           </Card>
