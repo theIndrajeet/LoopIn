@@ -114,7 +114,7 @@ export const MobileNav = () => {
           <div className={`p-2 rounded-2xl transition-all duration-300 ${isActive("/dashboard") ? "bg-primary/10 scale-110" : ""}`}>
             <CheckCircle2 className="w-5 h-5" />
           </div>
-          <span className={`text-[10px] font-medium transition-all ${isActive("/dashboard") ? "opacity-100" : "opacity-60"}`}>Habits</span>
+          <span className={`text-[10px] font-medium transition-all ${isActive("/dashboard") ? "opacity-100" : "opacity-60"}`}>Home</span>
         </button>
         
         <button
