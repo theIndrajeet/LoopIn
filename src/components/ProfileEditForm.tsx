@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -24,6 +24,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { TIMEZONE_OPTIONS, detectTimezone } from "@/lib/timezone-utils";
 
 const profileSchema = z.object({
   display_name: z
@@ -57,9 +58,17 @@ export function ProfileEditForm({ profile, onUpdate }: ProfileEditFormProps) {
       display_name: profile?.display_name || "",
       avatar_url: profile?.avatar_url || "",
       privacy_level: profile?.privacy_level || "friends",
-      timezone: profile?.timezone || "UTC",
+      timezone: profile?.timezone || detectTimezone(),
     },
   });
+
+  useEffect(() => {
+    // Auto-detect timezone if not set
+    if (!profile?.timezone) {
+      const detected = detectTimezone();
+      form.setValue('timezone', detected);
+    }
+  }, [profile?.timezone, form]);
 
   const avatarUrl = form.watch("avatar_url");
   const displayName = form.watch("display_name");
@@ -179,21 +188,16 @@ export function ProfileEditForm({ profile, onUpdate }: ProfileEditFormProps) {
                     <SelectValue placeholder="Select timezone" />
                   </SelectTrigger>
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value="UTC">UTC</SelectItem>
-                  <SelectItem value="America/New_York">Eastern Time</SelectItem>
-                  <SelectItem value="America/Chicago">Central Time</SelectItem>
-                  <SelectItem value="America/Denver">Mountain Time</SelectItem>
-                  <SelectItem value="America/Los_Angeles">Pacific Time</SelectItem>
-                  <SelectItem value="Europe/London">London</SelectItem>
-                  <SelectItem value="Europe/Paris">Paris</SelectItem>
-                  <SelectItem value="Asia/Tokyo">Tokyo</SelectItem>
-                  <SelectItem value="Asia/Shanghai">Shanghai</SelectItem>
-                  <SelectItem value="Australia/Sydney">Sydney</SelectItem>
+                <SelectContent className="max-h-[300px]">
+                  {TIMEZONE_OPTIONS.map((tz) => (
+                    <SelectItem key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormDescription>
-                Your local timezone for habit tracking
+                Auto-detected: {detectTimezone()}
               </FormDescription>
               <FormMessage />
             </FormItem>

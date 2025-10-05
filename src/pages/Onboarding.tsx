@@ -41,7 +41,25 @@ const Onboarding = () => {
 
   useEffect(() => {
     checkOnboardingStatus();
+    autoDetectAndSaveTimezone();
   }, []);
+
+  const autoDetectAndSaveTimezone = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
+      // Save to profile
+      await supabase
+        .from('profiles')
+        .update({ timezone: detectedTimezone })
+        .eq('id', user.id);
+    } catch (error) {
+      console.error('Error auto-detecting timezone:', error);
+    }
+  };
 
   const checkOnboardingStatus = async () => {
     const { data: { user } } = await supabase.auth.getUser();

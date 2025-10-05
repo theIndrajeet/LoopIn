@@ -1,5 +1,7 @@
 import { format, subDays, startOfDay, isSameDay } from "date-fns";
 import { Check, X } from "lucide-react";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
+import { convertToUserTimezone } from "@/lib/timezone-utils";
 
 interface HabitLog {
   completed_at: string;
@@ -11,13 +13,15 @@ interface HabitStreakCalendarProps {
 }
 
 export const HabitStreakCalendar = ({ logs, viewDays }: HabitStreakCalendarProps) => {
-  const today = startOfDay(new Date());
+  const { timezone } = useUserTimezone();
+  const today = startOfDay(convertToUserTimezone(new Date(), timezone));
   
   const days = Array.from({ length: viewDays }, (_, i) => {
     const date = subDays(today, viewDays - 1 - i);
-    const hasLog = logs.some(log => 
-      isSameDay(new Date(log.completed_at), date)
-    );
+    const hasLog = logs.some(log => {
+      const logDate = convertToUserTimezone(log.completed_at, timezone);
+      return isSameDay(logDate, date);
+    });
     const isToday = isSameDay(date, today);
     
     return {

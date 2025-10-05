@@ -13,6 +13,8 @@ import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Archive, Trash2 } from
 import { toast } from "@/hooks/use-toast";
 import { celebrationEvents, CelebrationType, CelebrationDetail } from "@/lib/celebrationEvents";
 import { useEffect as useEffectForCelebrations, useState as useStateForCelebrations } from "react";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
+import { getStartOfTodayInTimezone, convertToUserTimezone } from "@/lib/timezone-utils";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -20,6 +22,7 @@ import { SortableHabitCard } from "@/components/SortableHabitCard";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { timezone } = useUserTimezone();
   const [habits, setHabits] = useState<any[]>([]);
   const [todaysLogs, setTodaysLogs] = useState<any[]>([]);
   const [profile, setProfile] = useState<any>(null);
@@ -104,12 +107,15 @@ export default function Dashboard() {
         habitsQuery = habitsQuery.not("deleted_at", "is", null);
       }
 
+      // Get start of today in user's timezone for accurate "today" filtering
+      const startOfToday = getStartOfTodayInTimezone(timezone);
+
       const [habitsResult, logsResult, profileResult, streaksResult] = await Promise.all([
         habitsQuery,
         supabase
           .from("habit_logs")
           .select("habit_id")
-          .gte("completed_at", new Date().toISOString().split("T")[0]),
+          .gte("completed_at", startOfToday),
         supabase.from("profiles").select("*").eq("id", user.id).single(),
         supabase.from("streaks").select("*"),
       ]);
@@ -311,7 +317,7 @@ export default function Dashboard() {
                     <div className="flex-1">
                       <h3 className="font-semibold text-lg mb-1 text-muted-foreground">{habit.title}</h3>
                       <p className="text-xs text-muted-foreground">
-                        Archived {new Date(habit.archived_at).toLocaleDateString()}
+                        Archived {convertToUserTimezone(habit.archived_at, timezone).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

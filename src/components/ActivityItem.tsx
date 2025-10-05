@@ -1,6 +1,8 @@
 import { formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Flame, Zap, CheckCircle2, Trophy } from 'lucide-react';
+import { useUserTimezone } from '@/hooks/use-user-timezone';
+import { convertToUserTimezone } from '@/lib/timezone-utils';
 
 interface ActivityItemProps {
   event: {
@@ -46,10 +48,14 @@ const getEventMessage = (type: string, payload: any) => {
 };
 
 export const ActivityItem = ({ event }: ActivityItemProps) => {
+  const { timezone } = useUserTimezone();
   const displayName = event.profiles?.display_name || 'Someone';
   const avatarUrl = event.profiles?.avatar_url;
   const initials = displayName.slice(0, 2).toUpperCase();
-  const timeAgo = formatDistanceToNow(new Date(event.created_at), { addSuffix: true });
+  
+  // Convert to user's timezone before calculating distance
+  const userDate = convertToUserTimezone(event.created_at, timezone);
+  const timeAgo = formatDistanceToNow(userDate, { addSuffix: true });
 
   return (
     <div className="flex items-start gap-3 p-3 rounded-lg bg-card/50 border border-border/50 hover:border-primary/30 transition-colors">
