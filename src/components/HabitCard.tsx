@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion, PanInfo } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { Check, Flame, Archive, MoreVertical, Shield } from "lucide-react";
+import { Check, Flame, Archive, MoreVertical, Shield, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { HabitDetailDialog } from "./HabitDetailDialog";
@@ -286,6 +286,34 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
     }
   };
 
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      const { error } = await supabase
+        .from("habits")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", habit.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Moved to Trash",
+        description: `"${habit.title}" will be deleted in 30 days. Restore from Trash tab.`,
+      });
+
+      setTimeout(() => {
+        if (onArchive) onArchive(habit.id);
+      }, 100);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const difficultyColors = {
     easy: "text-success border-success/50",
     medium: "text-gold border-gold/50",
@@ -305,12 +333,9 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
     if (!isMobile) return;
     
     const threshold = 64;
-    if (info.offset.x > threshold && !isCompletedToday) {
-      // Swipe right to complete
-      handleComplete(event);
-      if ('vibrate' in navigator) navigator.vibrate([30, 50]);
-    } else if (info.offset.x < -threshold) {
-      // Swipe left to archive
+    
+    if (info.offset.x < -threshold) {
+      // Swipe LEFT to archive
       if (streak?.current_count > 10) {
         toast({
           title: "High streak!",
@@ -319,22 +344,28 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
       } else {
         handleArchive(event);
       }
+      if ('vibrate' in navigator) navigator.vibrate([30, 50]);
+    } else if (info.offset.x > threshold) {
+      // Swipe RIGHT to delete (move to trash)
+      handleDelete(event);
+      if ('vibrate' in navigator) navigator.vibrate([50, 30, 50]);
     }
+    
     setDragX(0);
   };
 
   const cardContent = (
     <div className="relative">
       {isMobile && dragX !== 0 && (
-        <div className="absolute inset-0 flex items-center justify-between px-6 pointer-events-none">
-          {dragX > 24 && (
-            <div className={`transition-opacity ${dragX > 64 ? 'opacity-100' : 'opacity-50'}`}>
-              <Check className="w-6 h-6 text-success" />
+        <div className="absolute inset-0 flex items-center justify-between px-6 pointer-events-none z-10">
+          {dragX < -24 && (
+            <div className={`transition-opacity ${dragX < -64 ? 'opacity-100' : 'opacity-50'}`}>
+              <Archive className="w-6 h-6 text-warning" />
             </div>
           )}
-          {dragX < -24 && (
-            <div className={`ml-auto transition-opacity ${dragX < -64 ? 'opacity-100' : 'opacity-50'}`}>
-              <Archive className="w-6 h-6 text-destructive" />
+          {dragX > 24 && (
+            <div className={`ml-auto transition-opacity ${dragX > 64 ? 'opacity-100' : 'opacity-50'}`}>
+              <Trash2 className="w-6 h-6 text-destructive" />
             </div>
           )}
         </div>
