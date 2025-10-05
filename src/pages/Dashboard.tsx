@@ -11,7 +11,7 @@ import { TaskDetailDialog } from "@/components/TaskDetailDialog";
 import { TodayProgressRing } from "@/components/TodayProgressRing";
 import { DashboardBanner } from "@/components/DashboardBanner";
 import { CelebrationPortal } from "@/components/CelebrationPortal";
-import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Archive, Trash2, ListTodo, Clock } from "lucide-react";
+import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Trash2, ListTodo, Clock } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { celebrationEvents, CelebrationType, CelebrationDetail } from "@/lib/celebrationEvents";
 import { useEffect as useEffectForCelebrations, useState as useStateForCelebrations } from "react";
@@ -39,7 +39,7 @@ export default function Dashboard() {
   const [streaks, setStreaks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [contentType, setContentType] = useState<"habits" | "tasks">("habits");
-  const [viewMode, setViewMode] = useState<"active" | "archived" | "trash">("active");
+  const [viewMode, setViewMode] = useState<"active" | "trash">("active");
   const [showAllDoneBanner, setShowAllDoneBanner] = useState(false);
   
   const [celebrationData, setCelebrationData] = useStateForCelebrations<CelebrationDetail | null>(null);
@@ -128,8 +128,6 @@ export default function Dashboard() {
             .is("deleted_at", null)
             .order('order_index', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: true });
-        } else if (viewMode === "archived") {
-          habitsQuery = habitsQuery.eq("active", false).not("archived_at", "is", null).is("deleted_at", null);
         } else if (viewMode === "trash") {
           habitsQuery = habitsQuery.not("deleted_at", "is", null);
         }
@@ -175,8 +173,6 @@ export default function Dashboard() {
             .is("deleted_at", null)
             .order('order_index', { ascending: true, nullsFirst: false })
             .order('created_at', { ascending: true });
-        } else if (viewMode === "archived") {
-          tasksQuery = tasksQuery.eq("completed", true).is("deleted_at", null);
         } else if (viewMode === "trash") {
           tasksQuery = tasksQuery.not("deleted_at", "is", null);
         }
@@ -352,10 +348,6 @@ export default function Dashboard() {
                 <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="hidden sm:block">
                   <TabsList>
                     <TabsTrigger value="active">Active</TabsTrigger>
-                    <TabsTrigger value="archived">
-                      <Archive className="w-4 h-4 mr-1" />
-                      Archived
-                    </TabsTrigger>
                     <TabsTrigger value="trash">
                       <Trash2 className="w-4 h-4 mr-1" />
                       Trash
@@ -379,9 +371,8 @@ export default function Dashboard() {
             </div>
 
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="sm:hidden mb-4">
-              <TabsList className="w-full grid grid-cols-3">
+              <TabsList className="w-full grid grid-cols-2">
                 <TabsTrigger value="active">Active</TabsTrigger>
-                <TabsTrigger value="archived">Archived</TabsTrigger>
                 <TabsTrigger value="trash">Trash</TabsTrigger>
               </TabsList>
             </Tabs>
@@ -402,7 +393,6 @@ export default function Dashboard() {
                       habit={habit}
                       isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
                       onComplete={fetchData}
-                      onArchive={fetchData}
                       style={{ animationDelay: `${idx * 50}ms` }}
                     />
                   ))}
@@ -457,46 +447,6 @@ export default function Dashboard() {
               </div>
             )}
 
-            {viewMode === "archived" && (
-              <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
-                  {habits.map((habit, idx) => (
-                    <Card key={habit.id} className="p-4 sm:p-5 bg-card/50 border border-border" style={{ animationDelay: `${idx * 50}ms` }}>
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg mb-1 text-muted-foreground">{habit.title}</h3>
-                          <p className="text-xs text-muted-foreground">
-                            Archived {convertToUserTimezone(habit.archived_at, timezone).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={async () => {
-                          await supabase
-                            .from("habits")
-                            .update({ active: true, archived_at: null })
-                            .eq("id", habit.id);
-                          fetchData();
-                          toast({ title: "Habit restored", description: "Habit is now active again." });
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                      >
-                        Restore to Active
-                      </Button>
-                    </Card>
-                  ))}
-                </div>
-
-                {habits.length === 0 && (
-                  <div className="text-center py-12">
-                    <Archive className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">No archived habits.</p>
-                  </div>
-                )}
-              </>
-            )}
 
             {viewMode === "trash" && (
               <>
@@ -518,10 +468,10 @@ export default function Dashboard() {
                             onClick={async () => {
                               await supabase
                                 .from("habits")
-                                .update({ deleted_at: null, archived_at: new Date().toISOString() })
+                                .update({ deleted_at: null, active: true, archived_at: null })
                                 .eq("id", habit.id);
                               fetchData();
-                              toast({ title: "Restored to Archived", description: "Habit moved to archived. Activate it to start tracking again." });
+                              toast({ title: "Habit restored to active" });
                             }}
                             variant="outline"
                             size="sm"
@@ -567,10 +517,6 @@ export default function Dashboard() {
                 <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="hidden sm:block">
                   <TabsList>
                     <TabsTrigger value="active">Active</TabsTrigger>
-                    <TabsTrigger value="archived">
-                      <Archive className="w-4 h-4 mr-1" />
-                      Completed
-                    </TabsTrigger>
                     <TabsTrigger value="trash">
                       <Trash2 className="w-4 h-4 mr-1" />
                       Trash
@@ -582,9 +528,8 @@ export default function Dashboard() {
             </div>
 
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="sm:hidden mb-4">
-              <TabsList className="w-full grid grid-cols-3">
+              <TabsList className="w-full grid grid-cols-2">
                 <TabsTrigger value="active">Active</TabsTrigger>
-                <TabsTrigger value="archived">Completed</TabsTrigger>
                 <TabsTrigger value="trash">Trash</TabsTrigger>
               </TabsList>
             </Tabs>
@@ -682,37 +627,6 @@ export default function Dashboard() {
               </div>
             )}
 
-            {viewMode === "archived" && (
-              <>
-                <div className="grid grid-cols-1 gap-3 sm:gap-4 animate-fade-in">
-                  {tasks.map((task, idx) => (
-                    <Card key={task.id} className="p-4 bg-card/50 border border-border cursor-pointer hover:shadow-md transition-shadow" 
-                      style={{ animationDelay: `${idx * 50}ms` }}
-                      onClick={() => {
-                        setSelectedTask(task);
-                        setTaskDetailOpen(true);
-                      }}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-lg mb-1 text-muted-foreground line-through">{task.title}</h3>
-                          <p className="text-xs text-muted-foreground">
-                            Completed {task.completed_at && new Date(task.completed_at).toLocaleDateString()}
-                          </p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-
-                {tasks.length === 0 && (
-                  <div className="text-center py-12">
-                    <Archive className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p className="text-muted-foreground">No completed tasks.</p>
-                  </div>
-                )}
-              </>
-            )}
 
             {viewMode === "trash" && (
               <>
@@ -727,9 +641,9 @@ export default function Dashboard() {
                       <div className="flex gap-2">
                         <Button
                           onClick={async () => {
-                            await supabase.from("tasks").update({ deleted_at: null }).eq("id", task.id);
+                            await supabase.from("tasks").update({ deleted_at: null, completed: false }).eq("id", task.id);
                             fetchData();
-                            toast({ title: "Task restored" });
+                            toast({ title: "Task restored to active" });
                           }}
                           variant="outline"
                           size="sm"

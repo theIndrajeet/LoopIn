@@ -54,7 +54,7 @@ export const DeleteConfirmDialog = ({
             </p>
             
             <div className="bg-muted/50 p-3 rounded-md space-y-1.5 text-sm">
-              <p><span className="font-medium">Logs to archive:</span> {totalLogs} completions</p>
+              <p><span className="font-medium">Logged completions:</span> {totalLogs}</p>
               <p><span className="font-medium">Current streak:</span> {currentStreak} days (will end)</p>
               <p><span className="font-medium">Best streak:</span> {bestStreak} days (kept as history)</p>
               <p><span className="font-medium">XP earned:</span> Stays on your profile</p>

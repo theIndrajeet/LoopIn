@@ -7,11 +7,10 @@ interface SortableHabitCardProps {
   habit: any;
   isCompletedToday: boolean;
   onComplete: () => void;
-  onArchive: (habitId: string) => void;
   style?: React.CSSProperties;
 }
 
-export const SortableHabitCard = ({ id, habit, isCompletedToday, onComplete, onArchive, style }: SortableHabitCardProps) => {
+export const SortableHabitCard = ({ id, habit, isCompletedToday, onComplete, style }: SortableHabitCardProps) => {
   const {
     attributes,
     listeners,
@@ -32,7 +31,6 @@ export const SortableHabitCard = ({ id, habit, isCompletedToday, onComplete, onA
         habit={habit}
         isCompletedToday={isCompletedToday}
         onComplete={onComplete}
-        onArchive={onArchive}
       />
     </div>
   );

@@ -34,17 +34,15 @@ interface HabitCardProps {
   habit: any;
   isCompletedToday: boolean;
   onComplete: () => void;
-  onArchive?: (habitId: string) => void;
 }
 
-export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: HabitCardProps) => {
+export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProps) => {
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dragX, setDragX] = useState(0);
   const [streak, setStreak] = useState<any>(null);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
-  const [archiving, setArchiving] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
   const [showXP, setShowXP] = useState(false);
   const [showMilestone, setShowMilestone] = useState(false);
@@ -250,42 +248,6 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
   };
 
 
-
-  const handleArchive = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setArchiving(true);
-    
-    try {
-      const { error } = await supabase
-        .from("habits")
-        .update({ 
-          active: false, 
-          archived_at: new Date().toISOString() 
-        })
-        .eq("id", habit.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Habit archived",
-        description: `"${habit.title}" archived. Streak ended. Restore from Archived tab within 30 days.`,
-      });
-
-      setTimeout(() => {
-        if (onArchive) onArchive(habit.id);
-      }, 100);
-
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setArchiving(false);
-    }
-  };
-
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -302,9 +264,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
         description: `"${habit.title}" will be deleted in 30 days. Restore from Trash tab.`,
       });
 
-      setTimeout(() => {
-        if (onArchive) onArchive(habit.id);
-      }, 100);
+      onComplete();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -335,22 +295,8 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
     const swipeThreshold = 80;
     const velocity = info.velocity.x;
     
-    // Strong swipe left OR dragged far left
-    if (info.offset.x < -swipeThreshold || (info.offset.x < -40 && velocity < -200)) {
-      // Swipe LEFT to archive
-      if (streak?.current_count > 10) {
-        toast({
-          title: "High streak!",
-          description: "Use the menu to archive habits with streaks > 10",
-        });
-      } else {
-        handleArchive(event);
-      }
-      if ('vibrate' in navigator) navigator.vibrate(50);
-    } 
-    // Strong swipe right OR dragged far right
-    else if (info.offset.x > swipeThreshold || (info.offset.x > 40 && velocity > 200)) {
-      // Swipe RIGHT to delete
+    // Strong swipe right to delete
+    if (info.offset.x > swipeThreshold || (info.offset.x > 40 && velocity > 200)) {
       handleDelete(event);
       if ('vibrate' in navigator) navigator.vibrate(50);
     }
@@ -360,14 +306,9 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
 
   const cardContent = (
     <div className="relative overflow-hidden">
-      {/* Background indicators that reveal during swipe */}
+      {/* Background indicator that reveals during swipe */}
       {isMobile && (
-        <div className="absolute inset-0 flex items-center justify-between">
-          {/* Left side - Archive (yellow) */}
-          <div className="absolute left-0 top-0 bottom-0 w-24 bg-warning/20 flex items-center justify-start pl-6">
-            <Archive className="w-6 h-6 text-warning" />
-          </div>
-          
+        <div className="absolute inset-0 flex items-center justify-end">
           {/* Right side - Delete (red) */}
           <div className="absolute right-0 top-0 bottom-0 w-24 bg-destructive/20 flex items-center justify-end pr-6">
             <Trash2 className="w-6 h-6 text-destructive" />
@@ -418,10 +359,6 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
                     Use Freeze ({freezeTokens} left)
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem onClick={handleArchive} disabled={archiving}>
-                  <Archive className="h-4 w-4 mr-2" />
-                  Archive
-                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
