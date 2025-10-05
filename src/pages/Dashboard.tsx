@@ -65,12 +65,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     checkAuth();
-    // Clear state immediately to prevent showing stale data during async fetch
-    if (contentType === "habits") {
-      setHabits([]);
-    } else {
-      setTasks([]);
-    }
     fetchData();
   }, [viewMode, contentType]);
   
@@ -120,6 +114,13 @@ export default function Dashboard() {
   };
 
   const fetchData = async () => {
+    // Clear state immediately to prevent showing stale data during async fetch
+    if (contentType === "habits") {
+      setHabits([]);
+    } else {
+      setTasks([]);
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
