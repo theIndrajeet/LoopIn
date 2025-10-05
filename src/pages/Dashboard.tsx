@@ -51,8 +51,16 @@ export default function Dashboard() {
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [taskDetailOpen, setTaskDetailOpen] = useState(false);
 
+  // Get current day of week (0 = Sunday, 6 = Saturday) for filtering habits scheduled today
+  const today = new Date().getDay();
+  
+  // Filter habits scheduled for today
+  const habitsScheduledToday = habits.filter(h => 
+    h.schedule_days && Array.isArray(h.schedule_days) && h.schedule_days.includes(today)
+  );
+  
   const completedToday = todaysLogs.length;
-  const totalHabits = habits.length;
+  const totalHabits = habitsScheduledToday.length;
   const totalStreaks = streaks.reduce((sum, s) => sum + s.current_count, 0);
 
   useEffect(() => {
@@ -128,13 +136,27 @@ export default function Dashboard() {
 
         // Get start of today in user's timezone for accurate "today" filtering
         const startOfToday = getStartOfTodayInTimezone(timezone);
+        const currentDayOfWeek = new Date().getDay();
 
         const [habitsResult, logsResult, profileResult, streaksResult] = await Promise.all([
           habitsQuery,
           supabase
             .from("habit_logs")
-            .select("habit_id")
-            .gte("completed_at", startOfToday),
+            .select(`
+              habit_id,
+              habits!inner (
+                id,
+                active,
+                archived_at,
+                deleted_at,
+                schedule_days
+              )
+            `)
+            .gte("completed_at", startOfToday)
+            .eq("habits.active", true)
+            .is("habits.archived_at", null)
+            .is("habits.deleted_at", null)
+            .contains("habits.schedule_days", [currentDayOfWeek]),
           supabase.from("profiles").select("*").eq("id", user.id).single(),
           supabase.from("streaks").select("*"),
         ]);
@@ -371,9 +393,9 @@ export default function Dashboard() {
             {viewMode === "active" && (
           <>
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={habits.map(h => h.id)} strategy={verticalListSortingStrategy}>
+              <SortableContext items={habitsScheduledToday.map(h => h.id)} strategy={verticalListSortingStrategy}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
-                  {habits.map((habit, idx) => (
+                  {habitsScheduledToday.map((habit, idx) => (
                     <SortableHabitCard
                       key={habit.id}
                       id={habit.id}
@@ -388,7 +410,7 @@ export default function Dashboard() {
               </SortableContext>
             </DndContext>
 
-            {habits.length === 0 && (
+            {habitsScheduledToday.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-xl font-medium mb-2 text-foreground">
                   Your first habit is the hardest—let's make it easy.
