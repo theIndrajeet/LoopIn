@@ -53,6 +53,17 @@ export default function Dashboard() {
     }
   }, [showAllDoneBanner]);
 
+  const sensors = useMemo(
+    () =>
+      useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+          coordinateGetter: sortableKeyboardCoordinates,
+        })
+      ),
+    []
+  );
+
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -109,17 +120,6 @@ export default function Dashboard() {
     await supabase.auth.signOut();
     navigate("/auth");
   };
-
-  const sensors = useMemo(
-    () =>
-      useSensors(
-        useSensor(PointerSensor),
-        useSensor(KeyboardSensor, {
-          coordinateGetter: sortableKeyboardCoordinates,
-        })
-      ),
-    []
-  );
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
