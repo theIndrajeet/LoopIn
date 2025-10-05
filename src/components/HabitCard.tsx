@@ -332,9 +332,11 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
   const handleDragEnd = async (event: any, info: PanInfo) => {
     if (!isMobile) return;
     
-    const threshold = 64;
+    const swipeThreshold = 80;
+    const velocity = info.velocity.x;
     
-    if (info.offset.x < -threshold) {
+    // Strong swipe left OR dragged far left
+    if (info.offset.x < -swipeThreshold || (info.offset.x < -40 && velocity < -200)) {
       // Swipe LEFT to archive
       if (streak?.current_count > 10) {
         toast({
@@ -344,30 +346,32 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
       } else {
         handleArchive(event);
       }
-      if ('vibrate' in navigator) navigator.vibrate([30, 50]);
-    } else if (info.offset.x > threshold) {
-      // Swipe RIGHT to delete (move to trash)
+      if ('vibrate' in navigator) navigator.vibrate(50);
+    } 
+    // Strong swipe right OR dragged far right
+    else if (info.offset.x > swipeThreshold || (info.offset.x > 40 && velocity > 200)) {
+      // Swipe RIGHT to delete
       handleDelete(event);
-      if ('vibrate' in navigator) navigator.vibrate([50, 30, 50]);
+      if ('vibrate' in navigator) navigator.vibrate(50);
     }
     
     setDragX(0);
   };
 
   const cardContent = (
-    <div className="relative">
-      {isMobile && dragX !== 0 && (
-        <div className="absolute inset-0 flex items-center justify-between px-6 pointer-events-none z-10">
-          {dragX < -24 && (
-            <div className={`transition-opacity ${dragX < -64 ? 'opacity-100' : 'opacity-50'}`}>
-              <Archive className="w-6 h-6 text-warning" />
-            </div>
-          )}
-          {dragX > 24 && (
-            <div className={`ml-auto transition-opacity ${dragX > 64 ? 'opacity-100' : 'opacity-50'}`}>
-              <Trash2 className="w-6 h-6 text-destructive" />
-            </div>
-          )}
+    <div className="relative overflow-hidden">
+      {/* Background indicators that reveal during swipe */}
+      {isMobile && (
+        <div className="absolute inset-0 flex items-center justify-between">
+          {/* Left side - Archive (yellow) */}
+          <div className="absolute left-0 top-0 bottom-0 w-24 bg-warning/20 flex items-center justify-start pl-6">
+            <Archive className="w-6 h-6 text-warning" />
+          </div>
+          
+          {/* Right side - Delete (red) */}
+          <div className="absolute right-0 top-0 bottom-0 w-24 bg-destructive/20 flex items-center justify-end pr-6">
+            <Trash2 className="w-6 h-6 text-destructive" />
+          </div>
         </div>
       )}
       
@@ -479,11 +483,14 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
       {isMobile ? (
         <motion.div
           drag="x"
-          dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.2}
+          dragConstraints={{ left: -100, right: 100 }}
+          dragElastic={0.1}
           onDrag={(_, info) => setDragX(info.offset.x)}
           onDragEnd={handleDragEnd}
           onClick={() => Math.abs(dragX) < 8 && setDialogOpen(true)}
+          animate={{ x: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 30 }}
+          style={{ x: dragX }}
         >
           {cardContent}
         </motion.div>
