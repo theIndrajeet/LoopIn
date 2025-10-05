@@ -1,8 +1,8 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle2, Trophy, Users, User, LogOut, Zap, Sparkles } from "lucide-react";
+import { CheckCircle2, Trophy, Users, User, LogOut, Zap, Sparkles, Bell } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { NotificationBell } from "@/components/NotificationBell";
+import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
   SheetContent,
@@ -26,12 +26,35 @@ export const MobileNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [open, setOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const isActive = (path: string) => location.pathname === path;
 
   useEffect(() => {
     fetchProfile();
+    fetchUnreadCount();
+
+    // Subscribe to realtime notifications
+    const channel = supabase
+      .channel('notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchProfile = async () => {
@@ -50,6 +73,19 @@ export const MobileNav = () => {
     } catch (error) {
       console.error("Error fetching profile:", error);
     }
+  };
+
+  const fetchUnreadCount = async () => {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session.session) return;
+
+    const { count } = await supabase
+      .from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', session.session.user.id)
+      .eq('read', false);
+
+    setUnreadCount(count || 0);
   };
 
   const handleSignOut = async () => {
@@ -126,12 +162,34 @@ export const MobileNav = () => {
           <span className={`text-[10px] font-medium transition-all ${isActive("/friends") ? "opacity-100" : "opacity-60"}`}>Friends</span>
         </button>
 
-        <div className="flex flex-col items-center gap-0.5 min-w-[52px] py-1">
-          <div className="p-2">
-            <NotificationBell />
-          </div>
-          <span className="text-[10px] font-medium text-muted-foreground opacity-60">Alerts</span>
-        </div>
+        <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+          <SheetTrigger asChild>
+            <button
+              className="relative flex flex-col items-center gap-0.5 min-w-[52px] transition-all duration-300 text-muted-foreground py-1"
+            >
+              <div className="p-2 rounded-2xl relative">
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center p-0 text-[9px]"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </div>
+              <span className="text-[10px] font-medium opacity-60">Alerts</span>
+            </button>
+          </SheetTrigger>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Notifications</SheetTitle>
+            </SheetHeader>
+            <div className="mt-4">
+              {/* Notifications list will be imported */}
+            </div>
+          </SheetContent>
+        </Sheet>
         
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
