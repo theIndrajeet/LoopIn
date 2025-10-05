@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useSound } from "@/hooks/use-sound";
 
 interface CreateTaskDialogProps {
   onTaskCreated: () => void;
@@ -23,6 +24,7 @@ export const CreateTaskDialog = ({ onTaskCreated }: CreateTaskDialogProps) => {
   const [priority, setPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
   const [dueDate, setDueDate] = useState<Date>();
   const [isCreating, setIsCreating] = useState(false);
+  const { play } = useSound();
 
   const handleCreate = async () => {
     if (!title.trim()) {
@@ -53,6 +55,12 @@ export const CreateTaskDialog = ({ onTaskCreated }: CreateTaskDialogProps) => {
         title: "Success",
         description: "Task created successfully",
       });
+
+      // Sound and haptic feedback
+      play('whoosh', 0.6);
+      if ('vibrate' in navigator) {
+        navigator.vibrate([30, 50, 30]);
+      }
 
       setTitle("");
       setDescription("");

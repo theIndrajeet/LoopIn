@@ -262,6 +262,12 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
 
       if (error) throw error;
 
+      // Sound and haptic feedback
+      play('whoosh', 0.5);
+      if ('vibrate' in navigator) {
+        navigator.vibrate([15, 30, 15]);
+      }
+
       toast({
         title: "Moved to Trash",
         description: `"${habit.title}" will be deleted in 30 days. Restore from Trash tab.`,

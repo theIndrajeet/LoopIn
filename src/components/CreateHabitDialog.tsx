@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { HabitSuggestionChip } from "./HabitSuggestionChip";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useSound } from "@/hooks/use-sound";
 
 interface CreateHabitDialogProps {
   onHabitCreated: () => void;
@@ -36,6 +37,7 @@ export const CreateHabitDialog = ({ onHabitCreated }: CreateHabitDialogProps) =>
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loadingAI, setLoadingAI] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const { play } = useSound();
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,6 +61,12 @@ export const CreateHabitDialog = ({ onHabitCreated }: CreateHabitDialogProps) =>
         title: "Habit created! 🎯",
         description: "Time to start building that streak!",
       });
+
+      // Sound and haptic feedback
+      play('whoosh', 0.6);
+      if ('vibrate' in navigator) {
+        navigator.vibrate([30, 50, 30]);
+      }
 
       setTitle("");
       setDifficulty("medium");

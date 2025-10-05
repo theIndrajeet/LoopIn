@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { format, isPast, isToday } from "date-fns";
+import { useSound } from "@/hooks/use-sound";
 
 interface TaskCardProps {
   task: {
@@ -27,6 +28,8 @@ const priorityConfig = {
 };
 
 export const TaskCard = ({ task, onComplete, onDelete, onClick }: TaskCardProps) => {
+  const { play } = useSound();
+  
   const getDueDateColor = () => {
     if (!task.due_date) return 'text-muted-foreground';
     const dueDate = new Date(task.due_date);
@@ -35,12 +38,28 @@ export const TaskCard = ({ task, onComplete, onDelete, onClick }: TaskCardProps)
     return 'text-muted-foreground';
   };
 
+  const handleComplete = () => {
+    play('complete', 0.5);
+    if ('vibrate' in navigator) {
+      navigator.vibrate(50);
+    }
+    onComplete();
+  };
+
+  const handleDelete = () => {
+    play('whoosh', 0.4);
+    if ('vibrate' in navigator) {
+      navigator.vibrate([15, 30, 15]);
+    }
+    onDelete();
+  };
+
   return (
     <Card className="p-4 bg-card/60 backdrop-blur-medium border-border/40 hover:border-primary/40 hover:bg-card/80 hover:shadow-elevated transition-all duration-300 group">
       <div className="flex items-start gap-3">
         <Checkbox
           checked={task.completed}
-          onCheckedChange={onComplete}
+          onCheckedChange={handleComplete}
           className="mt-1"
         />
         
@@ -76,7 +95,7 @@ export const TaskCard = ({ task, onComplete, onDelete, onClick }: TaskCardProps)
           size="icon"
           onClick={(e) => {
             e.stopPropagation();
-            onDelete();
+            handleDelete();
           }}
           className="text-muted-foreground hover:text-destructive"
         >
