@@ -52,7 +52,9 @@ export type Database = {
       habits: {
         Row: {
           active: boolean | null
+          archived_at: string | null
           created_at: string | null
+          deleted_at: string | null
           difficulty: Database["public"]["Enums"]["habit_difficulty"] | null
           id: string
           schedule_days: number[] | null
@@ -61,7 +63,9 @@ export type Database = {
         }
         Insert: {
           active?: boolean | null
+          archived_at?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           difficulty?: Database["public"]["Enums"]["habit_difficulty"] | null
           id?: string
           schedule_days?: number[] | null
@@ -70,7 +74,9 @@ export type Database = {
         }
         Update: {
           active?: boolean | null
+          archived_at?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           difficulty?: Database["public"]["Enums"]["habit_difficulty"] | null
           id?: string
           schedule_days?: number[] | null

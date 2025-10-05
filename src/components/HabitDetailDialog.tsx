@@ -6,8 +6,10 @@ import { HabitStreakCalendar } from "./HabitStreakCalendar";
 import { StreakStats } from "./StreakStats";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Check } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { subDays, startOfDay, isSameDay } from "date-fns";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Habit {
   id: string;
@@ -29,6 +31,7 @@ interface HabitDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onHabitCompleted: () => void;
+  onHabitDeleted?: () => void;
   todayCompleted: boolean;
 }
 
@@ -37,6 +40,7 @@ export const HabitDetailDialog = ({
   open, 
   onOpenChange, 
   onHabitCompleted,
+  onHabitDeleted,
   todayCompleted 
 }: HabitDetailDialogProps) => {
   const [viewDays, setViewDays] = useState<7 | 16 | 30>(30);
@@ -44,6 +48,8 @@ export const HabitDetailDialog = ({
   const [streak, setStreak] = useState<Streak>({ current_count: 0, best_count: 0 });
   const [loading, setLoading] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
 
   useEffect(() => {
     if (open && habit) {
@@ -116,6 +122,34 @@ export const HabitDetailDialog = ({
     }
   };
 
+  const handleDelete = async () => {
+    if (!habit) return;
+
+    try {
+      const { error } = await supabase
+        .from("habits")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", habit.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Moved to Trash",
+        description: `"${habit.title}" will be deleted in 30 days. Restore from Trash tab.`,
+      });
+
+      setDeleteDialogOpen(false);
+      onOpenChange(false);
+      if (onHabitDeleted) onHabitDeleted();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredLogs = logs.slice(0, viewDays);
   const completedInView = filteredLogs.length;
 
@@ -172,8 +206,43 @@ export const HabitDetailDialog = ({
               )}
             </Button>
           )}
+
+          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
+                {advancedOpen ? "Hide" : "Show"} Advanced Options
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="mt-4">
+              <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5">
+                <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Deleting moves this habit to Trash. You can restore it within 30 days.
+                </p>
+                <Button
+                  onClick={() => setDeleteDialogOpen(true)}
+                  variant="destructive"
+                  size="sm"
+                  className="w-full"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Habit
+                </Button>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
       </DialogContent>
+
+      <DeleteConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+        habitName={habit?.title || ""}
+        currentStreak={streak.current_count}
+        bestStreak={streak.best_count}
+        totalLogs={logs.length}
+      />
     </Dialog>
   );
 };

@@ -2,23 +2,31 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Flame } from "lucide-react";
+import { Check, Flame, Archive, MoreVertical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { HabitDetailDialog } from "./HabitDetailDialog";
 import { subDays, startOfDay, isSameDay } from "date-fns";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface HabitCardProps {
   habit: any;
   isCompletedToday: boolean;
   onComplete: () => void;
+  onArchive?: (habitId: string) => void;
 }
 
-export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProps) => {
+export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: HabitCardProps) => {
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [streak, setStreak] = useState<any>(null);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
+  const [archiving, setArchiving] = useState(false);
 
   useEffect(() => {
     fetchStreakData();
@@ -72,6 +80,41 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
     }
   };
 
+  const handleArchive = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setArchiving(true);
+    
+    try {
+      const { error } = await supabase
+        .from("habits")
+        .update({ 
+          active: false, 
+          archived_at: new Date().toISOString() 
+        })
+        .eq("id", habit.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Habit archived",
+        description: `"${habit.title}" archived. Streak ended. Restore from Archived tab within 30 days.`,
+      });
+
+      setTimeout(() => {
+        if (onArchive) onArchive(habit.id);
+      }, 100);
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setArchiving(false);
+    }
+  };
+
   const difficultyColors = {
     easy: "text-success border-success/50",
     medium: "text-gold border-gold/50",
@@ -105,9 +148,24 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
               )}
             </div>
           </div>
-          <Badge variant="outline" className={`${difficultyColors[habit.difficulty as keyof typeof difficultyColors]} text-xs`}>
-            {habit.difficulty}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className={`${difficultyColors[habit.difficulty as keyof typeof difficultyColors]} text-xs`}>
+              {habit.difficulty}
+            </Badge>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleArchive} disabled={archiving}>
+                  <Archive className="h-4 w-4 mr-2" />
+                  Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
         <div className="flex items-center gap-0.5 sm:gap-1 mb-4">
@@ -154,6 +212,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
           onComplete();
           fetchStreakData();
         }}
+        onHabitDeleted={onComplete}
         todayCompleted={isCompletedToday}
       />
     </>

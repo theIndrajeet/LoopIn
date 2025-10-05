@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CreateHabitDialog } from "@/components/CreateHabitDialog";
 import { HabitCard } from "@/components/HabitCard";
-import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users } from "lucide-react";
+import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Archive, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -15,11 +16,12 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<any>(null);
   const [streaks, setStreaks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<"active" | "archived" | "trash">("active");
 
   useEffect(() => {
     checkAuth();
     fetchData();
-  }, []);
+  }, [viewMode]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -33,8 +35,18 @@ export default function Dashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      let habitsQuery = supabase.from("habits").select("*").eq("user_id", user.id);
+
+      if (viewMode === "active") {
+        habitsQuery = habitsQuery.eq("active", true).is("archived_at", null).is("deleted_at", null);
+      } else if (viewMode === "archived") {
+        habitsQuery = habitsQuery.eq("active", false).not("archived_at", "is", null).is("deleted_at", null);
+      } else if (viewMode === "trash") {
+        habitsQuery = habitsQuery.not("deleted_at", "is", null);
+      }
+
       const [habitsResult, logsResult, profileResult, streaksResult] = await Promise.all([
-        supabase.from("habits").select("*").eq("user_id", user.id).eq("active", true),
+        habitsQuery,
         supabase
           .from("habit_logs")
           .select("habit_id")
@@ -143,30 +155,159 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <div className="flex justify-between items-center mb-4 sm:mb-6">
-          <h2 className="text-xl sm:text-2xl font-bold text-foreground">Your Habits</h2>
-          <CreateHabitDialog onHabitCreated={fetchData} />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
-          {habits.map((habit, idx) => (
-            <div key={habit.id} style={{ animationDelay: `${idx * 50}ms` }}>
-              <HabitCard
-                habit={habit}
-                isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
-                onComplete={fetchData}
-              />
-            </div>
-          ))}
-        </div>
-
-        {habits.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground mb-4">
-              No habits yet. Create your first one to get started!
-            </p>
-            <CreateHabitDialog onHabitCreated={fetchData} />
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
+          <div className="flex items-center gap-4 w-full sm:w-auto">
+            <h2 className="text-xl sm:text-2xl font-bold text-foreground">Your Habits</h2>
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="hidden sm:block">
+              <TabsList>
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="archived">
+                  <Archive className="w-4 h-4 mr-1" />
+                  Archived
+                </TabsTrigger>
+                <TabsTrigger value="trash">
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Trash
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
+          {viewMode === "active" && <CreateHabitDialog onHabitCreated={fetchData} />}
+        </div>
+
+        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="sm:hidden mb-4">
+          <TabsList className="w-full grid grid-cols-3">
+            <TabsTrigger value="active">Active</TabsTrigger>
+            <TabsTrigger value="archived">Archived</TabsTrigger>
+            <TabsTrigger value="trash">Trash</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {viewMode === "active" && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
+              {habits.map((habit, idx) => (
+                <div key={habit.id} style={{ animationDelay: `${idx * 50}ms` }}>
+                  <HabitCard
+                    habit={habit}
+                    isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
+                    onComplete={fetchData}
+                    onArchive={fetchData}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {habits.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground mb-4">
+                  No active habits. Create your first one to get started!
+                </p>
+                <CreateHabitDialog onHabitCreated={fetchData} />
+              </div>
+            )}
+          </>
+        )}
+
+        {viewMode === "archived" && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
+              {habits.map((habit, idx) => (
+                <Card key={habit.id} className="p-4 sm:p-5 bg-card/50 border border-border" style={{ animationDelay: `${idx * 50}ms` }}>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-lg mb-1 text-muted-foreground">{habit.title}</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Archived {new Date(habit.archived_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={async () => {
+                      await supabase
+                        .from("habits")
+                        .update({ active: true, archived_at: null })
+                        .eq("id", habit.id);
+                      fetchData();
+                      toast({ title: "Habit restored", description: "Habit is now active again." });
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                  >
+                    Restore to Active
+                  </Button>
+                </Card>
+              ))}
+            </div>
+
+            {habits.length === 0 && (
+              <div className="text-center py-12">
+                <Archive className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-muted-foreground">No archived habits.</p>
+              </div>
+            )}
+          </>
+        )}
+
+        {viewMode === "trash" && (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
+              {habits.map((habit, idx) => {
+                const daysLeft = 30 - Math.floor((Date.now() - new Date(habit.deleted_at).getTime()) / (1000 * 60 * 60 * 24));
+                return (
+                  <Card key={habit.id} className="p-4 sm:p-5 bg-destructive/10 border border-destructive/20" style={{ animationDelay: `${idx * 50}ms` }}>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-lg mb-1 text-muted-foreground line-through">{habit.title}</h3>
+                        <p className="text-xs text-destructive">
+                          Deletes in {daysLeft} days
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={async () => {
+                          await supabase
+                            .from("habits")
+                            .update({ deleted_at: null, archived_at: new Date().toISOString() })
+                            .eq("id", habit.id);
+                          fetchData();
+                          toast({ title: "Restored to Archived", description: "Habit moved to archived. Activate it to start tracking again." });
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        Restore
+                      </Button>
+                      <Button
+                        onClick={async () => {
+                          if (confirm(`Permanently delete "${habit.title}"? This cannot be undone.`)) {
+                            await supabase.from("habits").delete().eq("id", habit.id);
+                            fetchData();
+                            toast({ title: "Permanently deleted", variant: "destructive" });
+                          }
+                        }}
+                        variant="destructive"
+                        size="sm"
+                        className="flex-1"
+                      >
+                        Delete Now
+                      </Button>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+
+            {habits.length === 0 && (
+              <div className="text-center py-12">
+                <Trash2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                <p className="text-muted-foreground">Trash is empty.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
