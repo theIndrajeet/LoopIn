@@ -204,7 +204,7 @@ export default function AIAssistant() {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="fixed bottom-16 left-0 right-0 bg-elevated/80 backdrop-blur-heavy border-t border-border/40 p-4 shadow-elevated">
+      <div className="fixed bottom-20 left-0 right-0 bg-elevated/80 backdrop-blur-heavy border-t border-border/40 p-4 shadow-elevated">
         <div className="max-w-2xl mx-auto flex gap-2">
           <Input
             value={input}
