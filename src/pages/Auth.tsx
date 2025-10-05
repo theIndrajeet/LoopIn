@@ -33,18 +33,31 @@ const Auth = () => {
           title: "Welcome aboard! 🎉",
           description: "Your account has been created. Let's build some streaks!",
         });
+        navigate("/onboarding");
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error, data } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (error) throw error;
-        toast({
-          title: "Welcome back! 🔥",
-          description: "Ready to continue your streak?",
-        });
+        
+        // Check onboarding status
+        const { data: prefs } = await supabase
+          .from("user_preferences")
+          .select("onboarding_completed")
+          .eq("user_id", data.user.id)
+          .single();
+
+        if (!prefs?.onboarding_completed) {
+          navigate("/onboarding");
+        } else {
+          toast({
+            title: "Welcome back! 🔥",
+            description: "Ready to continue your streak?",
+          });
+          navigate("/dashboard");
+        }
       }
-      navigate("/");
     } catch (error: any) {
       toast({
         title: "Oops!",

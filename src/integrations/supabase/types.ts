@@ -52,34 +52,40 @@ export type Database = {
       habits: {
         Row: {
           active: boolean | null
+          added_from_suggestion: boolean | null
           archived_at: string | null
           created_at: string | null
           deleted_at: string | null
           difficulty: Database["public"]["Enums"]["habit_difficulty"] | null
           id: string
           schedule_days: number[] | null
+          suggestion_source: string | null
           title: string
           user_id: string
         }
         Insert: {
           active?: boolean | null
+          added_from_suggestion?: boolean | null
           archived_at?: string | null
           created_at?: string | null
           deleted_at?: string | null
           difficulty?: Database["public"]["Enums"]["habit_difficulty"] | null
           id?: string
           schedule_days?: number[] | null
+          suggestion_source?: string | null
           title: string
           user_id: string
         }
         Update: {
           active?: boolean | null
+          added_from_suggestion?: boolean | null
           archived_at?: string | null
           created_at?: string | null
           deleted_at?: string | null
           difficulty?: Database["public"]["Enums"]["habit_difficulty"] | null
           id?: string
           schedule_days?: number[] | null
+          suggestion_source?: string | null
           title?: string
           user_id?: string
         }
@@ -152,6 +158,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      suggestion_events: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          suggestion_id: string
+          suggestion_type: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          suggestion_id: string
+          suggestion_type: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          suggestion_id?: string
+          suggestion_type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string | null
+          dismissed_progressive_prompts: string[] | null
+          energy_level: string | null
+          experience_level: string | null
+          living_situation: string | null
+          main_struggles: string[] | null
+          onboarding_completed: boolean | null
+          preferred_styles: string[] | null
+          primary_goals: string[] | null
+          schedule_type: string | null
+          updated_at: string | null
+          user_id: string
+          work_environment: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          dismissed_progressive_prompts?: string[] | null
+          energy_level?: string | null
+          experience_level?: string | null
+          living_situation?: string | null
+          main_struggles?: string[] | null
+          onboarding_completed?: boolean | null
+          preferred_styles?: string[] | null
+          primary_goals?: string[] | null
+          schedule_type?: string | null
+          updated_at?: string | null
+          user_id: string
+          work_environment?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          dismissed_progressive_prompts?: string[] | null
+          energy_level?: string | null
+          experience_level?: string | null
+          living_situation?: string | null
+          main_struggles?: string[] | null
+          onboarding_completed?: boolean | null
+          preferred_styles?: string[] | null
+          primary_goals?: string[] | null
+          schedule_type?: string | null
+          updated_at?: string | null
+          user_id?: string
+          work_environment?: string | null
+        }
+        Relationships: []
       }
     }
     Views: {
