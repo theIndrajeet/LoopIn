@@ -310,81 +310,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Habit-specific stats */}
-        {contentType === "habits" && (
-          <div className="grid grid-cols-4 gap-2 sm:grid-cols-3 sm:gap-4 mb-6 sm:mb-8">
-            <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
-              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                  <Zap className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
-                </div>
-                <div className="text-center sm:text-left">
-                  <p className="text-xl sm:text-3xl font-bold text-foreground">{profile?.total_xp || 0}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Total XP</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
-              <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-gold/20 flex items-center justify-center shrink-0">
-                  <Flame className="w-4 h-4 sm:w-6 sm:h-6 text-gold" />
-                </div>
-                <div className="text-center sm:text-left">
-                  <p className="text-xl sm:text-3xl font-bold text-foreground">{totalStreaks}</p>
-                  <p className="text-xs sm:text-sm text-muted-foreground">Active Streaks</p>
-                </div>
-              </div>
-            </Card>
-
-            <Card className="col-span-2 sm:col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors flex items-center justify-center">
-              <TodayProgressRing completed={completedToday} total={totalHabits} />
-            </Card>
-          </div>
-        )}
-
-        {/* Task-specific stats */}
-        {contentType === "tasks" && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 sm:mb-8">
-            <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-yellow-500" />
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{tasksDueToday}</p>
-                  <p className="text-xs text-muted-foreground">Due Today</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
-              <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-500" />
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{taskCompletionRate}%</p>
-                  <p className="text-xs text-muted-foreground">Completion</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
-              <div className="flex items-center gap-2">
-                <ListTodo className="w-4 h-4 text-blue-500" />
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{totalTasks}</p>
-                  <p className="text-xs text-muted-foreground">Active</p>
-                </div>
-              </div>
-            </Card>
-            <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
-              <div className="flex items-center gap-2">
-                <Trash2 className="w-4 h-4 text-red-500" />
-                <div>
-                  <p className="text-2xl font-bold text-foreground">{overdueTasks}</p>
-                  <p className="text-xs text-muted-foreground">Overdue</p>
-                </div>
-              </div>
-            </Card>
-          </div>
-        )}
-
         {/* Content Type Tabs (Habits/Tasks) */}
         <Tabs value={contentType} onValueChange={(v) => setContentType(v as typeof contentType)} className="mb-6">
           <TabsList className="w-full sm:w-auto">
@@ -476,6 +401,39 @@ export default function Dashboard() {
             )}
           </>
         )}
+
+            {/* Habit-specific stats */}
+            {viewMode === "active" && (
+              <div className="grid grid-cols-4 gap-2 sm:grid-cols-3 sm:gap-4 mb-6 sm:mb-8 mt-8">
+                <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                      <Zap className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <p className="text-xl sm:text-3xl font-bold text-foreground">{profile?.total_xp || 0}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Total XP</p>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                    <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-gold/20 flex items-center justify-center shrink-0">
+                      <Flame className="w-4 h-4 sm:w-6 sm:h-6 text-gold" />
+                    </div>
+                    <div className="text-center sm:text-left">
+                      <p className="text-xl sm:text-3xl font-bold text-foreground">{totalStreaks}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Active Streaks</p>
+                    </div>
+                  </div>
+                </Card>
+
+                <Card className="col-span-2 sm:col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors flex items-center justify-center">
+                  <TodayProgressRing completed={completedToday} total={totalHabits} />
+                </Card>
+              </div>
+            )}
 
             {viewMode === "archived" && (
               <>
@@ -658,6 +616,48 @@ export default function Dashboard() {
                   </div>
                 )}
               </>
+            )}
+
+            {/* Task-specific stats */}
+            {viewMode === "active" && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 sm:mb-8 mt-8">
+                <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{tasksDueToday}</p>
+                      <p className="text-xs text-muted-foreground">Due Today</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{taskCompletionRate}%</p>
+                      <p className="text-xs text-muted-foreground">Completion</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex items-center gap-2">
+                    <ListTodo className="w-4 h-4 text-blue-500" />
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{totalTasks}</p>
+                      <p className="text-xs text-muted-foreground">Active</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{overdueTasks}</p>
+                      <p className="text-xs text-muted-foreground">Overdue</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
             )}
 
             {viewMode === "archived" && (
