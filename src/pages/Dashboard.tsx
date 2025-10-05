@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CreateHabitDialog } from "@/components/CreateHabitDialog";
 import { HabitCard } from "@/components/HabitCard";
-import { LogOut, Zap, Flame, CheckCircle2 } from "lucide-react";
+import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
@@ -87,10 +87,20 @@ export default function Dashboard() {
               Keep building those streaks!
             </p>
           </div>
-          <Button variant="outline" onClick={handleSignOut}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Sign Out
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate("/friends")}>
+              <Users className="w-4 h-4 mr-2" />
+              Friends
+            </Button>
+            <Button variant="outline" onClick={() => navigate("/leaderboard")}>
+              <Trophy className="w-4 h-4 mr-2" />
+              Leaderboard
+            </Button>
+            <Button variant="outline" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
