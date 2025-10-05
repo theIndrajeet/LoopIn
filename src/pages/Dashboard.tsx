@@ -65,6 +65,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     checkAuth();
+    // Clear state immediately to prevent showing stale data during async fetch
+    if (contentType === "habits") {
+      setHabits([]);
+    } else {
+      setTasks([]);
+    }
     fetchData();
   }, [viewMode, contentType]);
   
