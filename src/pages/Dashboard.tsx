@@ -53,15 +53,11 @@ export default function Dashboard() {
     }
   }, [showAllDoneBanner]);
 
-  const sensors = useMemo(
-    () =>
-      useSensors(
-        useSensor(PointerSensor),
-        useSensor(KeyboardSensor, {
-          coordinateGetter: sortableKeyboardCoordinates,
-        })
-      ),
-    []
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
   const checkAuth = async () => {
