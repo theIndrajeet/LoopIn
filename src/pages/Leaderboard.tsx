@@ -82,16 +82,49 @@ export default function Leaderboard() {
       // Fetch friends leaderboard
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // For now, just show current user until types regenerate
+        // Get all accepted friendships
+        const { data: friendshipsData } = await supabase
+          .from("friendships")
+          .select("friend_id, user_id")
+          .eq("status", "accepted")
+          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+
+        // Extract unique friend IDs (excluding current user)
+        const friendIds = new Set<string>();
+        friendshipsData?.forEach((friendship) => {
+          if (friendship.user_id !== user.id) friendIds.add(friendship.user_id);
+          if (friendship.friend_id !== user.id) friendIds.add(friendship.friend_id);
+        });
+
+        // Fetch profiles for all friends
+        const friendIdsArray = Array.from(friendIds);
+        const { data: friendProfiles } = await supabase
+          .from("profiles")
+          .select("id, display_name, avatar_url, total_xp")
+          .in("id", friendIdsArray);
+
+        // Fetch current user profile
         const { data: currentUserData } = await supabase
           .from("profiles")
           .select("id, display_name, avatar_url, total_xp")
           .eq("id", user.id)
           .single();
 
-        if (currentUserData) {
-          setFriendsLeaderboard([{ ...currentUserData, rank: 1 }]);
-        }
+        // Combine friends and current user
+        const allFriendsWithUser = [
+          ...(friendProfiles || []),
+          ...(currentUserData ? [currentUserData] : [])
+        ];
+
+        // Sort by XP and add ranks
+        const rankedFriends = allFriendsWithUser
+          .sort((a, b) => b.total_xp - a.total_xp)
+          .map((friend, index) => ({
+            ...friend,
+            rank: index + 1,
+          }));
+
+        setFriendsLeaderboard(rankedFriends);
       }
     } catch (error: any) {
       console.error("Error fetching leaderboards:", error);

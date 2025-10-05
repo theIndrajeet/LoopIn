@@ -108,7 +108,6 @@ export default function Friends() {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, display_name, avatar_url, total_xp")
-        .eq("privacy_level", "public")
         .neq("id", user.id)
         .ilike("display_name", `%${searchQuery}%`)
         .limit(10);
