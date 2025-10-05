@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { motion, PanInfo } from "framer-motion";
+import { motion, PanInfo, useMotionValue, useTransform } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Check, Flame, MoreVertical, Shield, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,7 +40,6 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dragX, setDragX] = useState(0);
   const [streak, setStreak] = useState<any>(null);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -52,6 +51,11 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
   const [freezeTokens, setFreezeTokens] = useState(0);
   const [showFreezeDialog, setShowFreezeDialog] = useState(false);
   const { play } = useSound();
+
+  // Framer Motion values for smooth swipe (no re-renders)
+  const x = useMotionValue(0);
+  const dragBgOpacity = useTransform(x, [-120, -20], [1, 0]);
+  const edgeGlowOpacity = useTransform(x, [-120, -60, 0], [1, 0.5, 0]);
 
   useEffect(() => {
     let mounted = true;
@@ -291,30 +295,14 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
   const handleDragEnd = async (event: any, info: PanInfo) => {
     if (!isMobile) return;
     
-    const swipeThreshold = 80;
-    const velocity = info.velocity.x;
-    
-    // Strong swipe right to delete
-    if (info.offset.x > swipeThreshold || (info.offset.x > 40 && velocity > 200)) {
+    // Swipe left to delete
+    if (info.offset.x < -80 || info.velocity.x < -500) {
+      if ('vibrate' in navigator) navigator.vibrate(12);
       handleDelete(event);
-      if ('vibrate' in navigator) navigator.vibrate(50);
     }
-    
-    setDragX(0);
   };
 
   const cardContent = (
-    <div className="relative overflow-hidden">
-      {/* Background indicator that reveals during swipe */}
-      {isMobile && (
-        <div className="absolute inset-0 flex items-center justify-end">
-          {/* Right side - Delete (red) */}
-          <div className="absolute right-0 top-0 bottom-0 w-24 bg-destructive/20 flex items-center justify-end pr-6">
-            <Trash2 className="w-6 h-6 text-destructive" />
-          </div>
-        </div>
-      )}
-      
       <Card
         onClick={() => !isMobile && setDialogOpen(true)}
         className="p-4 sm:p-5 bg-card/60 backdrop-blur-medium border border-border/40 hover:border-primary/60 hover:bg-card/80 transition-all duration-300 active:scale-[0.98] sm:hover:scale-[1.01] hover:shadow-elevated cursor-pointer touch-manipulation group"
@@ -411,25 +399,41 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
           </motion.div>
         </div>
       </Card>
-    </div>
   );
 
   return (
     <>
       {isMobile ? (
-        <motion.div
-          drag="x"
-          dragConstraints={{ left: -100, right: 100 }}
-          dragElastic={0.1}
-          onDrag={(_, info) => setDragX(info.offset.x)}
-          onDragEnd={handleDragEnd}
-          onClick={() => Math.abs(dragX) < 8 && setDialogOpen(true)}
-          animate={{ x: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          style={{ x: dragX }}
-        >
-          {cardContent}
-        </motion.div>
+        <div className="relative select-none">
+          {/* Delete backdrop - reveals on swipe left */}
+          <motion.div
+            style={{ opacity: dragBgOpacity as any }}
+            className="absolute inset-0 z-0 grid place-items-center rounded-2xl bg-gradient-to-r from-red-700 to-red-600 text-white"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Trash2 className="h-4 w-4" /> Swipe left to delete
+            </div>
+          </motion.div>
+
+          {/* Foreground draggable card */}
+          <motion.div
+            drag="x"
+            dragConstraints={{ left: -120, right: 0 }}
+            dragElastic={0.05}
+            onDragEnd={handleDragEnd}
+            onTap={() => setDialogOpen(true)}
+            style={{ x }}
+            className="relative z-10"
+          >
+            {cardContent}
+            
+            {/* Edge glow while dragging */}
+            <motion.div 
+              style={{ opacity: edgeGlowOpacity as any }} 
+              className="pointer-events-none absolute inset-y-0 right-0 w-6 rounded-r-2xl bg-gradient-to-l from-black/60 to-transparent" 
+            />
+          </motion.div>
+        </div>
       ) : (
         cardContent
       )}

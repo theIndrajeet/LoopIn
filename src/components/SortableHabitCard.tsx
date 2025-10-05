@@ -1,6 +1,7 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { HabitCard } from './HabitCard';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface SortableHabitCardProps {
   id: string;
@@ -11,6 +12,7 @@ interface SortableHabitCardProps {
 }
 
 export const SortableHabitCard = ({ id, habit, isCompletedToday, onComplete, style }: SortableHabitCardProps) => {
+  const isMobile = useIsMobile();
   const {
     attributes,
     listeners,
@@ -24,6 +26,20 @@ export const SortableHabitCard = ({ id, habit, isCompletedToday, onComplete, sty
     transition,
     ...style,
   };
+
+  // On mobile, disable dnd-kit sorting to prevent gesture conflicts
+  // Let HabitCard handle swipe gestures directly
+  if (isMobile) {
+    return (
+      <div ref={setNodeRef} style={style}>
+        <HabitCard
+          habit={habit}
+          isCompletedToday={isCompletedToday}
+          onComplete={onComplete}
+        />
+      </div>
+    );
+  }
 
   return (
     <div ref={setNodeRef} style={dragStyle} {...attributes} {...listeners}>
