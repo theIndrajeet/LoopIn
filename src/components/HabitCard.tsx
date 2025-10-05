@@ -202,6 +202,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
       setPendingAction({ type: 'complete', logId: data.id });
       setShowUndoUI(true);
       setUndoCountdown(5);
+      setLoading(false); // Reset loading state
 
       // Start countdown
       const interval = setInterval(() => {
