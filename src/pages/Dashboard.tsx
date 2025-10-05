@@ -47,6 +47,7 @@ export default function Dashboard() {
   
   // Task-specific state
   const [tasks, setTasks] = useState<any[]>([]);
+  const [allTasks, setAllTasks] = useState<any[]>([]);
   const [selectedTask, setSelectedTask] = useState<any | null>(null);
   const [taskDetailOpen, setTaskDetailOpen] = useState(false);
 
@@ -158,12 +159,14 @@ export default function Dashboard() {
           tasksQuery = tasksQuery.not("deleted_at", "is", null);
         }
 
-        const [tasksResult, profileResult] = await Promise.all([
+        const [tasksResult, allTasksResult, profileResult] = await Promise.all([
           tasksQuery,
+          supabase.from("tasks").select("*").eq("user_id", user.id).is("deleted_at", null),
           supabase.from("profiles").select("*").eq("id", user.id).single(),
         ]);
 
         if (tasksResult.data) setTasks(tasksResult.data);
+        if (allTasksResult.data) setAllTasks(allTasksResult.data);
         if (profileResult.data) setProfile(profileResult.data);
       }
     } catch (error: any) {
@@ -265,10 +268,10 @@ export default function Dashboard() {
   };
 
   // Task stats calculations
-  const tasksDueToday = tasks.filter(t => t.due_date && isToday(new Date(t.due_date)) && !t.completed).length;
-  const completedTasks = tasks.filter(t => t.completed).length;
-  const totalTasks = tasks.filter(t => !t.completed).length;
-  const overdueTasks = tasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && !t.completed).length;
+  const tasksDueToday = allTasks.filter(t => t.due_date && isToday(new Date(t.due_date)) && !t.completed).length;
+  const completedTasks = allTasks.filter(t => t.completed).length;
+  const totalTasks = allTasks.filter(t => !t.completed).length;
+  const overdueTasks = allTasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && !t.completed).length;
   const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / (completedTasks + totalTasks)) * 100) : 0;
 
   if (loading) {
