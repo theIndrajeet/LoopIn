@@ -7,7 +7,7 @@ import { CreateHabitDialog } from "@/components/CreateHabitDialog";
 import { CreateTaskDialog } from "@/components/CreateTaskDialog";
 import { HabitCard } from "@/components/HabitCard";
 import { TaskDetailDialog } from "@/components/TaskDetailDialog";
-import { FloatingSuggestionFAB } from "@/components/FloatingSuggestionFAB";
+
 import { TodayProgressRing } from "@/components/TodayProgressRing";
 import { DashboardBanner } from "@/components/DashboardBanner";
 import { CelebrationPortal } from "@/components/CelebrationPortal";
@@ -41,7 +41,7 @@ export default function Dashboard() {
   const [contentType, setContentType] = useState<"habits" | "tasks">("habits");
   const [viewMode, setViewMode] = useState<"active" | "archived" | "trash">("active");
   const [showAllDoneBanner, setShowAllDoneBanner] = useState(false);
-  const [showFAB, setShowFAB] = useState(false);
+  
   const [celebrationData, setCelebrationData] = useStateForCelebrations<CelebrationDetail | null>(null);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
   
@@ -437,7 +437,7 @@ export default function Dashboard() {
             </Tabs>
         
             {viewMode === "active" && showAllDoneBanner && (
-              <DashboardBanner onOpenSuggestions={() => setShowFAB(true)} />
+              <DashboardBanner onOpenSuggestions={() => setSuggestionsOpen(true)} />
             )}
 
             {viewMode === "active" && (
@@ -575,9 +575,6 @@ export default function Dashboard() {
               </>
             )}
 
-            {viewMode === "active" && (
-              <FloatingSuggestionFAB habitCount={habits.length} onHabitCreated={fetchData} />
-            )}
           </TabsContent>
 
           <TabsContent value="tasks" className="mt-6">
