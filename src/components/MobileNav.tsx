@@ -76,16 +76,30 @@ export const MobileNav = () => {
   };
 
   const fetchUnreadCount = async () => {
-    const { data: session } = await supabase.auth.getSession();
-    if (!session.session) return;
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) {
+        console.log('No session found');
+        return;
+      }
 
-    const { count } = await supabase
-      .from('notifications')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', session.session.user.id)
-      .eq('read', false);
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', session.session.user.id)
+        .eq('read', false);
 
-    setUnreadCount(count || 0);
+      if (error) {
+        console.error('Error fetching unread count:', error);
+        return;
+      }
+
+      const count = data?.length || 0;
+      console.log('Unread notifications count:', count);
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Error in fetchUnreadCount:', error);
+    }
   };
 
   const handleSignOut = async () => {
