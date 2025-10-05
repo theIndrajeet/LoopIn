@@ -1,5 +1,5 @@
-import { format, subDays, startOfDay, isSameDay } from "date-fns";
-import { Check, X } from "lucide-react";
+import { format, subDays, startOfDay, isSameDay, isAfter } from "date-fns";
+import { Check } from "lucide-react";
 import { useUserTimezone } from "@/hooks/use-user-timezone";
 import { convertToUserTimezone } from "@/lib/timezone-utils";
 
@@ -23,6 +23,7 @@ export const HabitStreakCalendar = ({ logs, viewDays }: HabitStreakCalendarProps
       return isSameDay(logDate, date);
     });
     const isToday = isSameDay(date, today);
+    const isFuture = isAfter(date, today);
     
     return {
       date,
@@ -30,47 +31,96 @@ export const HabitStreakCalendar = ({ logs, viewDays }: HabitStreakCalendarProps
       dayOfWeek: format(date, 'EEE').charAt(0),
       completed: hasLog,
       isToday,
+      isFuture,
     };
-  });
+  }).filter(day => !day.isFuture);
 
-  const gridCols = viewDays === 7 ? "grid-cols-7" : viewDays === 16 ? "grid-cols-8" : "grid-cols-7";
+  // Layout configurations
+  const getLayout = () => {
+    if (viewDays === 7) {
+      return { cols: 7, showWeekLabels: false, rowSize: 7 };
+    } else if (viewDays === 16) {
+      return { cols: 8, showWeekLabels: true, rowSize: 8 };
+    } else {
+      return { cols: 7, showWeekLabels: true, rowSize: 7 };
+    }
+  };
+
+  const layout = getLayout();
+  const weekDays = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 
   return (
-    <div className="space-y-2">
-      <div className={`grid ${gridCols} gap-2`}>
-        {days.map((day, idx) => (
-          <div key={idx} className="flex flex-col items-center gap-1">
-            {idx % 7 === 0 && viewDays > 7 && (
-              <span className="text-xs text-muted-foreground mb-1">{day.dayOfWeek}</span>
-            )}
-            {viewDays === 7 && idx === 0 && (
-              <span className="text-xs text-muted-foreground mb-1">{day.dayOfWeek}</span>
-            )}
-            <div
-              className={`
-                relative w-10 h-10 rounded-lg flex items-center justify-center text-sm font-medium
-                transition-all duration-200
-                ${day.completed 
-                  ? "bg-success text-white shadow-glow-success" 
-                  : day.isToday
-                  ? "bg-card border-2 border-primary text-foreground animate-pulse-glow"
-                  : "bg-card/50 text-muted-foreground border border-border/50"
-                }
-              `}
-            >
-              {day.completed ? (
-                <Check className="w-5 h-5" />
-              ) : day.isToday ? (
-                <span>{day.dateStr}</span>
-              ) : (
-                <X className="w-4 h-4 opacity-30" />
-              )}
-            </div>
-            {viewDays === 7 && (
-              <span className="text-xs text-muted-foreground">{day.dayOfWeek}</span>
-            )}
+    <div className="space-y-3">
+      <div className="bg-background/30 backdrop-blur-sm rounded-xl p-3">
+        {viewDays === 7 ? (
+          // Single row layout for 7 days
+          <div className="flex gap-1.5 justify-center">
+            {days.map((day, idx) => (
+              <div key={idx} className="flex flex-col items-center gap-1.5">
+                <div
+                  className={`
+                    relative w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium
+                    transition-all duration-300
+                    ${day.completed 
+                      ? "bg-success/90 text-white shadow-soft" 
+                      : day.isToday
+                      ? "bg-background ring-2 ring-primary/60 text-foreground animate-pulse"
+                      : "bg-border/10 text-muted-foreground/40"
+                    }
+                  `}
+                >
+                  {day.completed ? (
+                    <Check className="w-4 h-4" />
+                  ) : day.isToday ? (
+                    <span className="text-[10px] font-semibold">{day.dateStr}</span>
+                  ) : (
+                    <div className="w-1.5 h-1.5 rounded-full bg-current opacity-20" />
+                  )}
+                </div>
+                <span className="text-[10px] text-muted-foreground/60 font-medium">{day.dayOfWeek}</span>
+              </div>
+            ))}
           </div>
-        ))}
+        ) : (
+          // Grid layout for 16 and 30 days
+          <div className="flex gap-2">
+            {layout.showWeekLabels && (
+              <div className="flex flex-col justify-around py-1">
+                {weekDays.map((day, idx) => (
+                  <div key={idx} className="h-7 flex items-center justify-center">
+                    <span className="text-[10px] text-muted-foreground/50 font-medium w-4">{day}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className={`grid grid-cols-${layout.cols} gap-1.5 flex-1`}>
+              {days.map((day, idx) => (
+                <div key={idx} className="flex items-center justify-center">
+                  <div
+                    className={`
+                      relative w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium
+                      transition-all duration-300
+                      ${day.completed 
+                        ? "bg-success/90 text-white shadow-soft" 
+                        : day.isToday
+                        ? "bg-background ring-2 ring-primary/60 text-foreground animate-pulse"
+                        : "bg-border/10 text-muted-foreground/40"
+                      }
+                    `}
+                  >
+                    {day.completed ? (
+                      <Check className="w-4 h-4" />
+                    ) : day.isToday ? (
+                      <span className="text-[10px] font-semibold">{day.dateStr}</span>
+                    ) : (
+                      <div className="w-1.5 h-1.5 rounded-full bg-current opacity-20" />
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
