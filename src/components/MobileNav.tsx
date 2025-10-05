@@ -129,7 +129,7 @@ export const MobileNav = () => {
           <div className={`p-2 rounded-2xl transition-all duration-300 ${isActive("/ai-assistant") ? "bg-primary/10 scale-110" : ""}`}>
             <Sparkles className="w-5 h-5" />
           </div>
-          <span className={`text-[10px] font-medium transition-all ${isActive("/ai-assistant") ? "opacity-100" : "opacity-60"}`}>AI</span>
+          <span className={`text-[10px] font-medium transition-all ${isActive("/ai-assistant") ? "opacity-100" : "opacity-60"}`}>Magic</span>
         </button>
         
         <button
