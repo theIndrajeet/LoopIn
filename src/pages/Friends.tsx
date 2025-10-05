@@ -309,18 +309,22 @@ export default function Friends() {
         </Card>
 
         <Tabs defaultValue="friends" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="friends">
-              Friends ({friends.length})
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2">
+            <TabsTrigger value="friends" className="text-xs sm:text-sm">
+              <Users className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Friends</span> ({friends.length})
             </TabsTrigger>
-            <TabsTrigger value="pending">
-              Requests ({pendingRequests.length})
+            <TabsTrigger value="pending" className="text-xs sm:text-sm">
+              <UserPlus className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Requests</span> ({pendingRequests.length})
             </TabsTrigger>
-            <TabsTrigger value="sent">
-              Sent ({sentRequests.length})
+            <TabsTrigger value="sent" className="text-xs sm:text-sm">
+              <Check className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Sent</span> ({sentRequests.length})
             </TabsTrigger>
-            <TabsTrigger value="activity">
-              Activity
+            <TabsTrigger value="activity" className="text-xs sm:text-sm">
+              <Flame className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Activity</span>
             </TabsTrigger>
           </TabsList>
 
