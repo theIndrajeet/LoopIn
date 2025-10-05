@@ -17,11 +17,26 @@ export default function Dashboard() {
   const [streaks, setStreaks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"active" | "archived" | "trash">("active");
+  const [showAllDoneBanner, setShowAllDoneBanner] = useState(false);
+
+  const completedToday = todaysLogs.length;
+  const totalHabits = habits.length;
+  const totalStreaks = streaks.reduce((sum, s) => sum + s.current_count, 0);
 
   useEffect(() => {
     checkAuth();
     fetchData();
   }, [viewMode]);
+
+  useEffect(() => {
+    if (viewMode === "active" && habits.length > 0 && completedToday === totalHabits && totalHabits > 0) {
+      const hasShownBanner = sessionStorage.getItem("all_done_banner_shown");
+      if (!hasShownBanner) {
+        setShowAllDoneBanner(true);
+        sessionStorage.setItem("all_done_banner_shown", "true");
+      }
+    }
+  }, [completedToday, totalHabits, habits.length, viewMode]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -83,9 +98,16 @@ export default function Dashboard() {
     );
   }
 
-  const completedToday = todaysLogs.length;
-  const totalHabits = habits.length;
-  const totalStreaks = streaks.reduce((sum, s) => sum + s.current_count, 0);
+  useEffect(() => {
+    if (showAllDoneBanner) {
+      toast({
+        title: "All done today! 🎉",
+        description: "Add one for tomorrow?",
+        duration: 7000,
+      });
+      setShowAllDoneBanner(false);
+    }
+  }, [showAllDoneBanner]);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">

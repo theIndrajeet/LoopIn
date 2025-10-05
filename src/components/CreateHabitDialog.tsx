@@ -164,12 +164,14 @@ export const CreateHabitDialog = ({ onHabitCreated }: CreateHabitDialogProps) =>
             <Label htmlFor="title">Habit name</Label>
             <Input
               id="title"
-              placeholder="Read for 15 minutes"
+              placeholder="📖 Read for 15 minutes"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(e) => setTitle(e.target.value.slice(0, 50))}
               required
+              maxLength={50}
               className="bg-input border-border text-foreground"
             />
+            <p className="text-xs text-muted-foreground">Emoji supported! {title.length}/50</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="difficulty">Difficulty</Label>

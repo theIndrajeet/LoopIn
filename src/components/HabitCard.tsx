@@ -35,11 +35,35 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
   const [showConfetti, setShowConfetti] = useState(false);
   const [showXP, setShowXP] = useState(false);
   const [showMilestone, setShowMilestone] = useState(false);
+  const [completionRate, setCompletionRate] = useState<number | null>(null);
+  const [lastLogId, setLastLogId] = useState<string | null>(null);
+  const [isAtRisk, setIsAtRisk] = useState(false);
   const { play } = useSound();
 
   useEffect(() => {
     fetchStreakData();
-  }, [habit.id]);
+    fetchCompletionRate();
+    checkAtRisk();
+  }, [habit.id, isCompletedToday]);
+
+  const checkAtRisk = () => {
+    const currentHour = new Date().getHours();
+    setIsAtRisk(currentHour >= 18 && !isCompletedToday);
+  };
+
+  const fetchCompletionRate = async () => {
+    const thirtyDaysAgo = subDays(new Date(), 30);
+    const { data } = await supabase
+      .from("habit_logs")
+      .select("completed_at")
+      .eq("habit_id", habit.id)
+      .gte("completed_at", thirtyDaysAgo.toISOString());
+    
+    if (data) {
+      const rate = Math.round((data.length / 30) * 100);
+      setCompletionRate(rate);
+    }
+  };
 
   const fetchStreakData = async () => {
     const [streakResult, logsResult] = await Promise.all([
@@ -68,14 +92,19 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
         hard: 'complete-hard' as const 
       };
 
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("habit_logs")
         .insert({
           habit_id: habit.id,
           xp_earned: xp,
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Store log ID for undo
+      if (data) setLastLogId(data.id);
 
       // Trigger celebrations
       play(soundMap[habit.difficulty as keyof typeof soundMap]);
@@ -87,9 +116,30 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
         navigator.vibrate([50, 100, 50]);
       }
 
-      toast({
-        title: "Habit completed! 🎉",
-        description: `+${xp} XP earned`,
+      // Track analytics
+      await supabase.from("suggestion_events").insert({
+        user_id: (await supabase.auth.getUser()).data.user?.id,
+        suggestion_type: "habit_action",
+        action: "habit_complete",
+        suggestion_id: habit.id,
+        metadata: { source: "tap", xp_awarded: xp }
+      });
+
+      const { dismiss } = toast({
+        title: "Marked done. Undo?",
+        duration: 5000,
+        action: (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              await handleUndo(data.id, xp);
+              dismiss();
+            }}
+          >
+            Undo
+          </Button>
+        ),
       });
 
       onComplete();
@@ -114,6 +164,58 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
       setTimeout(() => {
         setShowConfetti(false);
       }, 2000);
+    }
+  };
+
+  const handleUndo = async (logId: string, xp: number) => {
+    try {
+      // Delete the log
+      const { error: deleteError } = await supabase
+        .from("habit_logs")
+        .delete()
+        .eq("id", logId);
+
+      if (deleteError) throw deleteError;
+
+      // Revert XP
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("total_xp")
+          .eq("id", user.id)
+          .single();
+
+        const { error: xpError } = await supabase
+          .from("profiles")
+          .update({ total_xp: (profileData?.total_xp || 0) - xp })
+          .eq("id", user.id);
+        
+        if (xpError) throw xpError;
+      }
+
+      // Track undo event
+      await supabase.from("suggestion_events").insert({
+        user_id: user?.id,
+        suggestion_type: "habit_action",
+        action: "habit_undo",
+        suggestion_id: habit.id,
+      });
+
+      toast({
+        title: "Undone",
+        description: "Completion reversed",
+      });
+
+      setLastLogId(null);
+      onComplete();
+      await fetchStreakData();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
 
@@ -176,12 +278,22 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
         <div className="flex items-start justify-between mb-3">
           <div className="flex-1">
             <h3 className="font-semibold text-lg mb-1 text-foreground">{habit.title}</h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               {streak && streak.current_count > 0 && (
                 <div className="flex items-center gap-1 text-gold">
                   <Flame className="w-4 h-4" />
                   <span className="text-sm font-medium">{streak.current_count}</span>
                 </div>
+              )}
+              {isAtRisk && (
+                <Badge variant="destructive" className="text-xs">
+                  Streak at risk
+                </Badge>
+              )}
+              {completionRate !== null && (
+                <span className="text-xs text-muted-foreground">
+                  Last 30 days: {completionRate}%
+                </span>
               )}
             </div>
           </div>
