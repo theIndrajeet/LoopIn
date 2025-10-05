@@ -53,10 +53,6 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
   const [isAtRisk, setIsAtRisk] = useState(false);
   const [freezeTokens, setFreezeTokens] = useState(0);
   const [showFreezeDialog, setShowFreezeDialog] = useState(false);
-  const [showUndoUI, setShowUndoUI] = useState(false);
-  const [undoCountdown, setUndoCountdown] = useState(5);
-  const [pendingAction, setPendingAction] = useState<{ type: 'complete' | 'archive', logId?: string } | null>(null);
-  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timeout | null>(null);
   const { play } = useSound();
 
   useEffect(() => {
@@ -164,9 +160,15 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
   const handleComplete = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setLoading(true);
+    
     try {
       const xpMap = { easy: 10, medium: 15, hard: 20 };
       const xp = xpMap[habit.difficulty as keyof typeof xpMap];
+      const soundMap = { 
+        easy: 'complete' as const, 
+        medium: 'complete-medium' as const, 
+        hard: 'complete-hard' as const 
+      };
 
       const { data, error } = await supabase
         .from("habit_logs")
@@ -179,7 +181,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
 
       if (error) throw error;
 
-      // Insert social event
+      // Insert social event and track analytics
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase.from('social_events').insert({
@@ -188,7 +190,6 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
           payload: { habit_title: habit.title }
         });
         
-        // Track analytics
         await supabase.from("suggestion_events").insert({
           user_id: user.id,
           suggestion_type: "habit_action",
@@ -198,147 +199,57 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
         });
       }
 
-      // Show inline undo UI
-      setPendingAction({ type: 'complete', logId: data.id });
-      setShowUndoUI(true);
-      setUndoCountdown(5);
-      setLoading(false); // Reset loading state
-
-      // Start countdown
-      const interval = setInterval(() => {
-        setUndoCountdown(prev => {
-          if (prev <= 1) {
-            clearInterval(interval);
-            confirmComplete(data.id);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      // Instant celebration!
+      play(soundMap[habit.difficulty as keyof typeof soundMap]);
+      setShowConfetti(true);
+      setShowXP(true);
       
-      setCountdownInterval(interval);
-
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-      setLoading(false);
-    }
-  };
-
-  const confirmComplete = async (logId: string) => {
-    const xpMap = { easy: 10, medium: 15, hard: 20 };
-    const xp = xpMap[habit.difficulty as keyof typeof xpMap];
-    const soundMap = { 
-      easy: 'complete' as const, 
-      medium: 'complete-medium' as const, 
-      hard: 'complete-hard' as const 
-    };
-
-    play(soundMap[habit.difficulty as keyof typeof soundMap]);
-    setShowConfetti(true);
-    setShowXP(true);
-    
-    if ('vibrate' in navigator) {
-      navigator.vibrate([50, 100, 50]);
-    }
-
-    toast({
-      title: "Habit completed! 🎉",
-      description: `+${xp} XP earned`,
-    });
-
-    onComplete();
-    await fetchStreakData();
-
-    const newStreak = (streak?.current_count || 0) + 1;
-    if ([7, 30, 100].includes(newStreak)) {
-      setTimeout(async () => {
-        play('streak-milestone');
-        setShowMilestone(true);
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('social_events').insert({
-            user_id: user.id,
-            type: 'streak_milestone',
-            payload: { habit_title: habit.title, streak_count: newStreak }
-          });
-        }
-      }, 1500);
-    }
-
-    setLoading(false);
-    setShowUndoUI(false);
-    setPendingAction(null);
-    
-    setTimeout(() => {
-      setShowConfetti(false);
-    }, 2000);
-  };
-
-  const handleUndoInline = async () => {
-    if (!pendingAction) return;
-
-    // Clear countdown interval
-    if (countdownInterval) {
-      clearInterval(countdownInterval);
-      setCountdownInterval(null);
-    }
-
-    try {
-      if (pendingAction.type === 'complete' && pendingAction.logId) {
-        // Delete the log
-        await supabase
-          .from('habit_logs')
-          .delete()
-          .eq('id', pendingAction.logId);
-
-        // Revert XP
-        const xpMap = { easy: 10, medium: 15, hard: 20 };
-        const xp = xpMap[habit.difficulty as keyof typeof xpMap];
-        
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("total_xp")
-            .eq("id", user.id)
-            .single();
-
-          await supabase
-            .from("profiles")
-            .update({ total_xp: (profileData?.total_xp || 0) - xp })
-            .eq("id", user.id);
-        }
-      } else if (pendingAction.type === 'archive') {
-        await supabase
-          .from('habits')
-          .update({ active: true, archived_at: null })
-          .eq('id', habit.id);
+      if ('vibrate' in navigator) {
+        navigator.vibrate([50, 100, 50]);
       }
 
       toast({
-        title: "Undone",
-        description: "Action cancelled",
+        title: "Habit completed! 🎉",
+        description: `+${xp} XP earned`,
       });
 
-      setShowUndoUI(false);
-      setPendingAction(null);
-      setUndoCountdown(5);
-      setLoading(false);
       onComplete();
       await fetchStreakData();
+
+      const newStreak = (streak?.current_count || 0) + 1;
+      if ([7, 30, 100].includes(newStreak)) {
+        setTimeout(async () => {
+          play('streak-milestone');
+          setShowMilestone(true);
+          
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.from('social_events').insert({
+              user_id: user.id,
+              type: 'streak_milestone',
+              payload: { habit_title: habit.title, streak_count: newStreak }
+            });
+          }
+        }, 1500);
+      }
+
+      setLoading(false);
+      
+      setTimeout(() => {
+        setShowConfetti(false);
+      }, 2000);
+
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
       });
+      setLoading(false);
     }
   };
+
+
 
   const handleArchive = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -406,75 +317,14 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
           description: "Use the menu to archive habits with streaks > 10",
         });
       } else {
-        // Archive with inline undo UI
-        try {
-          await supabase
-            .from('habits')
-            .update({ active: false, archived_at: new Date().toISOString() })
-            .eq('id', habit.id);
-
-          setPendingAction({ type: 'archive' });
-          setShowUndoUI(true);
-          setUndoCountdown(5);
-
-          const interval = setInterval(() => {
-            setUndoCountdown(prev => {
-              if (prev <= 1) {
-                clearInterval(interval);
-                confirmArchive();
-                return 0;
-              }
-              return prev - 1;
-            });
-          }, 1000);
-          
-          setCountdownInterval(interval);
-        } catch (error: any) {
-          toast({
-            title: "Error",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
+        handleArchive(event);
       }
     }
     setDragX(0);
   };
 
-  const confirmArchive = () => {
-    toast({
-      title: "Archived",
-      description: `"${habit.title}" has been archived`,
-    });
-    setShowUndoUI(false);
-    setPendingAction(null);
-    if (onArchive) onArchive(habit.id);
-  };
-
   const cardContent = (
     <div className="relative">
-      {showUndoUI && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="absolute top-0 left-0 right-0 bg-primary/90 backdrop-blur-sm z-10 rounded-t-lg p-3 flex items-center justify-between"
-        >
-          <span className="text-primary-foreground text-sm font-medium">
-            {pendingAction?.type === 'complete' ? 'Completing' : 'Archiving'} in {undoCountdown}s
-          </span>
-          <Button 
-            size="sm" 
-            variant="secondary"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleUndoInline();
-            }}
-            className="h-8"
-          >
-            Undo
-          </Button>
-        </motion.div>
-      )}
       {isMobile && dragX !== 0 && (
         <div className="absolute inset-0 flex items-center justify-between px-6 pointer-events-none">
           {dragX > 24 && (
