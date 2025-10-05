@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion, PanInfo } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { Check, Flame, Archive, MoreVertical, Shield, Trash2 } from "lucide-react";
+import { Check, Flame, MoreVertical, Shield, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { HabitDetailDialog } from "./HabitDetailDialog";
@@ -54,33 +54,54 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
   const { play } = useSound();
 
   useEffect(() => {
-    fetchStreakData();
-    fetchCompletionRate();
-    checkAtRisk();
-    fetchFreezeTokens();
+    let mounted = true;
+    
+    const fetchAllData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user || !mounted) return;
+
+      const thirtyDaysAgo = subDays(new Date(), 30);
+      
+      const [streakResult, logsResult, prefsResult] = await Promise.all([
+        supabase.from("streaks").select("*").eq("habit_id", habit.id).maybeSingle(),
+        supabase
+          .from("habit_logs")
+          .select("completed_at")
+          .eq("habit_id", habit.id)
+          .gte("completed_at", subDays(new Date(), 7).toISOString())
+          .order("completed_at", { ascending: false }),
+        supabase
+          .from('user_preferences')
+          .select('freeze_tokens_remaining')
+          .eq('user_id', user.id)
+          .single()
+      ]);
+
+      if (!mounted) return;
+
+      if (streakResult.data) setStreak(streakResult.data);
+      if (logsResult.data) {
+        setRecentLogs(logsResult.data);
+        const rate = Math.round((logsResult.data.length / 30) * 100);
+        setCompletionRate(rate);
+      }
+      if (prefsResult.data) setFreezeTokens(prefsResult.data.freeze_tokens_remaining || 0);
+      
+      const currentHour = new Date().getHours();
+      setIsAtRisk(currentHour >= 18 && !isCompletedToday);
+    };
+
+    fetchAllData();
+    
+    return () => { mounted = false; };
   }, [habit.id, isCompletedToday]);
 
-  const fetchFreezeTokens = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const { data } = await supabase
-      .from('user_preferences')
-      .select('freeze_tokens_remaining')
-      .eq('user_id', user.id)
-      .single();
-
-    if (data) {
-      setFreezeTokens(data.freeze_tokens_remaining || 0);
-    }
-  };
 
   const handleUseFreeze = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Decrement freeze tokens
       const { error: prefsError } = await supabase
         .from('user_preferences')
         .update({ freeze_tokens_remaining: freezeTokens - 1 })
@@ -88,7 +109,6 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
 
       if (prefsError) throw prefsError;
 
-      // Mark freeze used for this habit today
       const { error: streakError } = await supabase
         .from('streaks')
         .update({ freeze_used_on: new Date().toISOString().split('T')[0] })
@@ -96,7 +116,6 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
 
       if (streakError) throw streakError;
 
-      // Track event
       await supabase.from('suggestion_events').insert({
         user_id: user.id,
         suggestion_type: 'freeze_token',
@@ -111,32 +130,13 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
 
       setShowFreezeDialog(false);
       setIsAtRisk(false);
-      await fetchFreezeTokens();
+      setFreezeTokens(freezeTokens - 1);
     } catch (error: any) {
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
       });
-    }
-  };
-
-  const checkAtRisk = () => {
-    const currentHour = new Date().getHours();
-    setIsAtRisk(currentHour >= 18 && !isCompletedToday);
-  };
-
-  const fetchCompletionRate = async () => {
-    const thirtyDaysAgo = subDays(new Date(), 30);
-    const { data } = await supabase
-      .from("habit_logs")
-      .select("completed_at")
-      .eq("habit_id", habit.id)
-      .gte("completed_at", thirtyDaysAgo.toISOString());
-    
-    if (data) {
-      const rate = Math.round((data.length / 30) * 100);
-      setCompletionRate(rate);
     }
   };
 
@@ -179,25 +179,24 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProp
 
       if (error) throw error;
 
-      // Insert social event and track analytics
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase.from('social_events').insert({
-          user_id: user.id,
-          type: 'habit_completed',
-          payload: { habit_title: habit.title }
-        });
-        
-        await supabase.from("suggestion_events").insert({
-          user_id: user.id,
-          suggestion_type: "habit_action",
-          action: "habit_complete",
-          suggestion_id: habit.id,
-          metadata: { source: "tap", xp_awarded: xp }
-        });
+        await Promise.all([
+          supabase.from('social_events').insert({
+            user_id: user.id,
+            type: 'habit_completed',
+            payload: { habit_title: habit.title }
+          }),
+          supabase.from("suggestion_events").insert({
+            user_id: user.id,
+            suggestion_type: "habit_action",
+            action: "habit_complete",
+            suggestion_id: habit.id,
+            metadata: { source: "tap", xp_awarded: xp }
+          })
+        ]);
       }
 
-      // Instant celebration!
       play(soundMap[habit.difficulty as keyof typeof soundMap]);
       setShowConfetti(true);
       setShowXP(true);
