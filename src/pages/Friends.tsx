@@ -122,8 +122,11 @@ export default function Friends() {
 
   const sendFriendRequest = async (friendId: string) => {
     try {
+      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      console.log('[Friends] Sending friend request:', { from: user.id, to: friendId });
 
       const { error } = await supabase.from("friendships").insert({
         user_id: user.id,
@@ -133,33 +136,62 @@ export default function Friends() {
       });
 
       if (error) {
+        console.error('[Friends] Error sending request:', error);
         if (error.code === "23505") {
           toast.info("Friend request already sent!");
         } else {
           throw error;
         }
       } else {
-        toast.success("Friend request sent!");
+        console.log('[Friends] Friend request sent successfully');
+        toast.success("Friend request sent! 🎉");
+        setSearchResults([]);
+        setSearchQuery("");
         fetchFriendships();
       }
     } catch (error: any) {
-      console.error("Error sending friend request:", error);
+      console.error("[Friends] Error sending friend request:", error);
       toast.error("Failed to send friend request");
+    } finally {
+      setLoading(false);
     }
   };
 
   const acceptRequest = async (userId: string) => {
     try {
+      setLoading(true);
+      console.log('[Friends] Accepting friend request from:', userId);
+
       const { error } = await supabase.rpc("accept_friend_request", {
         friend_user_id: userId,
       });
 
-      if (error) throw error;
-      toast.success("Friend request accepted!");
+      if (error) {
+        console.error('[Friends] Error accepting request:', error);
+        throw error;
+      }
+
+      console.log('[Friends] Friend request accepted successfully');
+      
+      // Verify bidirectional friendship was created
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: friendships } = await supabase
+          .from("friendships")
+          .select("*")
+          .eq("status", "accepted")
+          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+        
+        console.log('[Friends] All friendships after accept:', friendships);
+      }
+
+      toast.success("Friend request accepted! 🎉");
       fetchFriendships();
     } catch (error: any) {
-      console.error("Error accepting request:", error);
+      console.error("[Friends] Error accepting request:", error);
       toast.error("Failed to accept request");
+    } finally {
+      setLoading(false);
     }
   };
 

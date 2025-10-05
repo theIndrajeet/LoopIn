@@ -82,12 +82,17 @@ export default function Leaderboard() {
       // Fetch friends leaderboard
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        console.log('[Leaderboard] Fetching friends for user:', user.id);
+        
         // Get all accepted friendships
-        const { data: friendshipsData } = await supabase
+        const { data: friendshipsData, error: friendshipsError } = await supabase
           .from("friendships")
           .select("friend_id, user_id")
           .eq("status", "accepted")
           .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`);
+
+        console.log('[Leaderboard] Friendships data:', friendshipsData);
+        if (friendshipsError) console.error('[Leaderboard] Friendships error:', friendshipsError);
 
         // Extract unique friend IDs (excluding current user)
         const friendIds = new Set<string>();
@@ -96,12 +101,17 @@ export default function Leaderboard() {
           if (friendship.friend_id !== user.id) friendIds.add(friendship.friend_id);
         });
 
+        console.log('[Leaderboard] Friend IDs:', Array.from(friendIds));
+
         // Fetch profiles for all friends
         const friendIdsArray = Array.from(friendIds);
-        const { data: friendProfiles } = await supabase
+        const { data: friendProfiles, error: profilesError } = await supabase
           .from("profiles")
           .select("id, display_name, avatar_url, total_xp")
           .in("id", friendIdsArray);
+
+        console.log('[Leaderboard] Friend profiles:', friendProfiles);
+        if (profilesError) console.error('[Leaderboard] Profiles error:', profilesError);
 
         // Fetch current user profile
         const { data: currentUserData } = await supabase
@@ -116,6 +126,8 @@ export default function Leaderboard() {
           ...(currentUserData ? [currentUserData] : [])
         ];
 
+        console.log('[Leaderboard] Combined friends+user:', allFriendsWithUser);
+
         // Sort by XP and add ranks
         const rankedFriends = allFriendsWithUser
           .sort((a, b) => b.total_xp - a.total_xp)
@@ -124,6 +136,7 @@ export default function Leaderboard() {
             rank: index + 1,
           }));
 
+        console.log('[Leaderboard] Final ranked friends:', rankedFriends);
         setFriendsLeaderboard(rankedFriends);
       }
     } catch (error: any) {
