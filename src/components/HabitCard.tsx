@@ -1,82 +1,66 @@
-import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Flame, CheckCircle2, Circle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Check, Flame } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { HabitDetailDialog } from "./HabitDetailDialog";
+import { subDays, startOfDay, isSameDay } from "date-fns";
 
 interface HabitCardProps {
-  habit: {
-    id: string;
-    title: string;
-    difficulty: "easy" | "medium" | "hard";
-  };
-  streak: {
-    current_count: number;
-    best_count: number;
-  } | null;
+  habit: any;
   isCompletedToday: boolean;
   onComplete: () => void;
 }
 
-const difficultyConfig = {
-  easy: { color: "text-green-600", bg: "bg-green-100", xp: 10 },
-  medium: { color: "text-yellow-600", bg: "bg-yellow-100", xp: 15 },
-  hard: { color: "text-red-600", bg: "bg-red-100", xp: 20 },
-};
+export const HabitCard = ({ habit, isCompletedToday, onComplete }: HabitCardProps) => {
+  const [loading, setLoading] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [streak, setStreak] = useState<any>(null);
+  const [recentLogs, setRecentLogs] = useState<any[]>([]);
 
-export const HabitCard = ({ habit, streak, isCompletedToday, onComplete }: HabitCardProps) => {
-  const [completing, setCompleting] = useState(false);
-  const config = difficultyConfig[habit.difficulty];
+  useEffect(() => {
+    fetchStreakData();
+  }, [habit.id]);
+
+  const fetchStreakData = async () => {
+    const [streakResult, logsResult] = await Promise.all([
+      supabase.from("streaks").select("*").eq("habit_id", habit.id).single(),
+      supabase
+        .from("habit_logs")
+        .select("completed_at")
+        .eq("habit_id", habit.id)
+        .gte("completed_at", subDays(new Date(), 7).toISOString())
+        .order("completed_at", { ascending: false }),
+    ]);
+
+    if (streakResult.data) setStreak(streakResult.data);
+    if (logsResult.data) setRecentLogs(logsResult.data);
+  };
 
   const handleComplete = async () => {
-    if (isCompletedToday) return;
-    
-    setCompleting(true);
+    setLoading(true);
     try {
-      // Create completion log
-      const { error: logError } = await supabase
+      const xpMap = { easy: 10, medium: 15, hard: 20 };
+      const xp = xpMap[habit.difficulty as keyof typeof xpMap];
+
+      const { error } = await supabase
         .from("habit_logs")
         .insert({
           habit_id: habit.id,
-          xp_earned: config.xp,
+          xp_earned: xp,
         });
 
-      if (logError) throw logError;
-
-      // Update or create streak
-      const today = new Date().toISOString().split('T')[0];
-      
-      if (streak) {
-        const { error: streakError } = await supabase
-          .from("streaks")
-          .update({
-            current_count: streak.current_count + 1,
-            best_count: Math.max(streak.best_count, streak.current_count + 1),
-            last_completed_date: today,
-          })
-          .eq("habit_id", habit.id);
-
-        if (streakError) throw streakError;
-      } else {
-        const { error: streakError } = await supabase
-          .from("streaks")
-          .insert({
-            habit_id: habit.id,
-            current_count: 1,
-            best_count: 1,
-            last_completed_date: today,
-          });
-
-        if (streakError) throw streakError;
-      }
+      if (error) throw error;
 
       toast({
-        title: "🎉 Habit completed!",
-        description: `+${config.xp} XP earned! Keep the streak going!`,
+        title: "Habit completed! 🎉",
+        description: `+${xp} XP earned`,
       });
 
       onComplete();
+      fetchStreakData();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -84,60 +68,94 @@ export const HabitCard = ({ habit, streak, isCompletedToday, onComplete }: Habit
         variant: "destructive",
       });
     } finally {
-      setCompleting(false);
+      setLoading(false);
     }
   };
 
-  return (
-    <Card className="overflow-hidden shadow-card hover:shadow-glow transition-all duration-300">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 space-y-2">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold">{habit.title}</h3>
-              <span className={`text-xs px-2 py-1 rounded-full ${config.bg} ${config.color} font-medium`}>
-                {habit.difficulty}
-              </span>
-            </div>
-            
-            {streak && streak.current_count > 0 && (
-              <div className="flex items-center gap-2 text-sm">
-                <Flame className="w-4 h-4 text-orange-500" />
-                <span className="font-semibold text-orange-600">
-                  {streak.current_count} day streak
-                </span>
-                {streak.best_count > streak.current_count && (
-                  <span className="text-muted-foreground">
-                    (Best: {streak.best_count})
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
+  const difficultyColors = {
+    easy: "text-success border-success/50",
+    medium: "text-gold border-gold/50",
+    hard: "text-primary border-primary/50",
+  };
 
+  const xpMap = { easy: 10, medium: 15, hard: 20 };
+
+  const today = startOfDay(new Date());
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const date = subDays(today, 6 - i);
+    const hasLog = recentLogs.some(log => isSameDay(new Date(log.completed_at), date));
+    return hasLog;
+  });
+
+  return (
+    <>
+      <Card
+        onClick={() => setDialogOpen(true)}
+        className="p-5 bg-card border border-border hover:border-primary transition-all duration-200 hover:scale-[1.02] hover:shadow-glow-primary cursor-pointer"
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg mb-1 text-foreground">{habit.title}</h3>
+            <div className="flex items-center gap-2">
+              {streak && streak.current_count > 0 && (
+                <div className="flex items-center gap-1 text-gold">
+                  <Flame className="w-4 h-4" />
+                  <span className="text-sm font-medium">{streak.current_count}</span>
+                </div>
+              )}
+            </div>
+          </div>
+          <Badge variant="outline" className={`${difficultyColors[habit.difficulty as keyof typeof difficultyColors]} text-xs`}>
+            {habit.difficulty}
+          </Badge>
+        </div>
+
+        <div className="flex items-center gap-1 mb-4">
+          {last7Days.map((completed, idx) => (
+            <div
+              key={idx}
+              className={`w-6 h-6 rounded-full transition-colors ${
+                completed ? "bg-success" : "bg-card border border-border/50"
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            +{xpMap[habit.difficulty as keyof typeof xpMap]} XP
+          </span>
           <Button
-            onClick={handleComplete}
-            disabled={isCompletedToday || completing}
-            size="lg"
-            variant={isCompletedToday ? "outline" : "default"}
-            className={isCompletedToday ? "cursor-default" : ""}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleComplete();
+            }}
+            disabled={isCompletedToday || loading}
+            variant={isCompletedToday ? "secondary" : "default"}
+            size="sm"
           >
             {isCompletedToday ? (
-              <CheckCircle2 className="w-5 h-5 text-primary" />
+              <>
+                <Check className="w-4 h-4 mr-1" />
+                Done
+              </>
             ) : (
-              <Circle className="w-5 h-5" />
+              "Complete"
             )}
           </Button>
         </div>
+      </Card>
 
-        <div className="mt-4 text-sm text-muted-foreground">
-          {isCompletedToday ? (
-            <span className="text-primary font-medium">✓ Completed today</span>
-          ) : (
-            <span>Tap to complete and earn {config.xp} XP</span>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+      <HabitDetailDialog
+        habit={habit}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onHabitCompleted={() => {
+          onComplete();
+          fetchStreakData();
+        }}
+        todayCompleted={isCompletedToday}
+      />
+    </>
   );
 };

@@ -2,78 +2,52 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { HabitCard } from "@/components/HabitCard";
+import { Card } from "@/components/ui/card";
 import { CreateHabitDialog } from "@/components/CreateHabitDialog";
-import { LogOut, User, Zap, Flame } from "lucide-react";
+import { HabitCard } from "@/components/HabitCard";
+import { LogOut, Zap, Flame, CheckCircle2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-interface Habit {
-  id: string;
-  title: string;
-  difficulty: "easy" | "medium" | "hard";
-}
-
-interface Streak {
-  habit_id: string;
-  current_count: number;
-  best_count: number;
-  last_completed_date: string | null;
-}
-
-interface HabitLog {
-  habit_id: string;
-  completed_at: string;
-}
-
-const Dashboard = () => {
-  const [habits, setHabits] = useState<Habit[]>([]);
-  const [streaks, setStreaks] = useState<Streak[]>([]);
-  const [logs, setLogs] = useState<HabitLog[]>([]);
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export default function Dashboard() {
   const navigate = useNavigate();
+  const [habits, setHabits] = useState<any[]>([]);
+  const [todaysLogs, setTodaysLogs] = useState<any[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [streaks, setStreaks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuth();
+    fetchData();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/auth");
+    }
+  };
 
   const fetchData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        navigate("/auth");
-        return;
-      }
+      if (!user) return;
 
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      setProfile(profileData);
+      const [habitsResult, logsResult, profileResult, streaksResult] = await Promise.all([
+        supabase.from("habits").select("*").eq("user_id", user.id).eq("active", true),
+        supabase
+          .from("habit_logs")
+          .select("habit_id")
+          .gte("completed_at", new Date().toISOString().split("T")[0]),
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
+        supabase.from("streaks").select("*"),
+      ]);
 
-      // Fetch habits
-      const { data: habitsData } = await supabase
-        .from("habits")
-        .select("*")
-        .eq("active", true)
-        .order("created_at", { ascending: false });
-      setHabits(habitsData || []);
-
-      // Fetch streaks
-      const { data: streaksData } = await supabase
-        .from("streaks")
-        .select("*");
-      setStreaks(streaksData || []);
-
-      // Fetch today's logs
-      const today = new Date().toISOString().split('T')[0];
-      const { data: logsData } = await supabase
-        .from("habit_logs")
-        .select("habit_id, completed_at")
-        .gte("completed_at", `${today}T00:00:00`)
-        .lte("completed_at", `${today}T23:59:59`);
-      setLogs(logsData || []);
-
+      if (habitsResult.data) setHabits(habitsResult.data);
+      if (logsResult.data) setTodaysLogs(logsResult.data);
+      if (profileResult.data) setProfile(profileResult.data);
+      if (streaksResult.data) setStreaks(streaksResult.data);
     } catch (error: any) {
-      console.error("Error fetching data:", error);
       toast({
         title: "Error loading data",
         description: error.message,
@@ -84,124 +58,107 @@ const Dashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
   };
 
-  const totalXP = profile?.total_xp || 0;
-  const totalStreaks = streaks.reduce((sum, s) => sum + s.current_count, 0);
-  const completedToday = logs.length;
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-2xl font-semibold text-primary">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
+  const completedToday = todaysLogs.length;
+  const totalHabits = habits.length;
+  const totalStreaks = streaks.reduce((sum, s) => sum + s.current_count, 0);
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card shadow-sm">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-hero rounded-full flex items-center justify-center">
-                <User className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold">Loop Level</h1>
-                <p className="text-sm text-muted-foreground">
-                  Hey, {profile?.display_name || "there"}!
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" onClick={handleSignOut} size="sm">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Stats Bar */}
-      <div className="bg-gradient-hero text-white py-6">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Zap className="w-5 h-5" />
-                <p className="text-3xl font-bold">{totalXP}</p>
-              </div>
-              <p className="text-sm opacity-90">Total XP</p>
-            </div>
-            <div className="text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Flame className="w-5 h-5" />
-                <p className="text-3xl font-bold">{totalStreaks}</p>
-              </div>
-              <p className="text-sm opacity-90">Total Streaks</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold">{completedToday}</p>
-              <p className="text-sm opacity-90">Done Today</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6 flex items-center justify-between">
+      <div className="container max-w-6xl mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Today's Habits</h2>
+            <h1 className="text-4xl font-bold mb-2 text-foreground">
+              Welcome back, {profile?.display_name || "there"}! 👋
+            </h1>
             <p className="text-muted-foreground">
-              {habits.length === 0
-                ? "Create your first habit to get started!"
-                : `${completedToday} of ${habits.length} completed`}
+              Keep building those streaks!
             </p>
           </div>
+          <Button variant="outline" onClick={handleSignOut}>
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <Card className="p-6 bg-card border-border hover:border-primary transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Zap className="w-6 h-6 text-primary" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-foreground">{profile?.total_xp || 0}</p>
+                <p className="text-sm text-muted-foreground">Total XP</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-card border-border hover:border-primary transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-gold/20 flex items-center justify-center">
+                <Flame className="w-6 h-6 text-gold" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-foreground">{totalStreaks}</p>
+                <p className="text-sm text-muted-foreground">Active Streaks</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-card border-border hover:border-primary transition-colors">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-success/20 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-success" />
+              </div>
+              <div>
+                <p className="text-3xl font-bold text-foreground">
+                  {completedToday}/{totalHabits}
+                </p>
+                <p className="text-sm text-muted-foreground">Completed Today</p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-foreground">Your Habits</h2>
           <CreateHabitDialog onHabitCreated={fetchData} />
         </div>
 
-        {habits.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="bg-muted rounded-full w-24 h-24 mx-auto mb-4 flex items-center justify-center">
-              <Zap className="w-12 h-12 text-muted-foreground" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fade-in">
+          {habits.map((habit, idx) => (
+            <div key={habit.id} style={{ animationDelay: `${idx * 50}ms` }}>
+              <HabitCard
+                habit={habit}
+                isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
+                onComplete={fetchData}
+              />
             </div>
-            <h3 className="text-2xl font-semibold mb-2">No habits yet</h3>
-            <p className="text-muted-foreground mb-6">
-              Start building better habits today!
+          ))}
+        </div>
+
+        {habits.length === 0 && (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">
+              No habits yet. Create your first one to get started!
             </p>
             <CreateHabitDialog onHabitCreated={fetchData} />
           </div>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {habits.map((habit) => {
-              const streak = streaks.find((s) => s.habit_id === habit.id);
-              const isCompletedToday = logs.some((log) => log.habit_id === habit.id);
-
-              return (
-                <HabitCard
-                  key={habit.id}
-                  habit={habit}
-                  streak={streak || null}
-                  isCompletedToday={isCompletedToday}
-                  onComplete={fetchData}
-                />
-              );
-            })}
-          </div>
         )}
-      </main>
+      </div>
     </div>
   );
-};
-
-export default Dashboard;
+}
