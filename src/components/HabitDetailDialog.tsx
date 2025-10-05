@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HabitStreakCalendar } from "./HabitStreakCalendar";
 import { StreakStats } from "./StreakStats";
@@ -48,6 +50,7 @@ export const HabitDetailDialog = ({
   onHabitDeleted,
   todayCompleted 
 }: HabitDetailDialogProps) => {
+  const isMobile = useIsMobile();
   const [viewDays, setViewDays] = useState<7 | 16 | 30>(30);
   const [logs, setLogs] = useState<HabitLog[]>([]);
   const [streak, setStreak] = useState<Streak>({ current_count: 0, best_count: 0 });
@@ -189,97 +192,144 @@ export const HabitDetailDialog = ({
   const filteredLogs = logs.slice(0, viewDays);
   const completedInView = filteredLogs.length;
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-popover border-border">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">{habit?.title}</DialogTitle>
-        </DialogHeader>
+  const dialogContent = (
+    <div className="space-y-6">
+      <Tabs value={viewDays.toString()} onValueChange={(v) => setViewDays(Number(v) as 7 | 16 | 30)}>
+        <TabsList className="grid w-full grid-cols-3 bg-card">
+          <TabsTrigger value="7">7 Days</TabsTrigger>
+          <TabsTrigger value="16">16 Days</TabsTrigger>
+          <TabsTrigger value="30">30 Days</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
-        <div className="space-y-6">
-          <Tabs value={viewDays.toString()} onValueChange={(v) => setViewDays(Number(v) as 7 | 16 | 30)}>
-            <TabsList className="grid w-full grid-cols-3 bg-card">
-              <TabsTrigger value="7">7 Days</TabsTrigger>
-              <TabsTrigger value="16">16 Days</TabsTrigger>
-              <TabsTrigger value="30">30 Days</TabsTrigger>
-            </TabsList>
-          </Tabs>
-
-          <div className="grid md:grid-cols-[1fr,auto] gap-6">
-            <div>
-              {loading ? (
-                <div className="h-40 flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                </div>
-              ) : (
-                <HabitStreakCalendar logs={filteredLogs} viewDays={viewDays} />
-              )}
+      <div className="grid md:grid-cols-[1fr,auto] gap-6">
+        <div>
+          {loading ? (
+            <div className="h-40 flex items-center justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-
-            <div className="md:w-48">
-              <StreakStats
-                currentStreak={streak.current_count}
-                bestStreak={streak.best_count}
-                completionRate={{ completed: completedInView, total: viewDays }}
-              />
-            </div>
-          </div>
-
-          {!todayCompleted && (
-            <motion.div
-              whileTap={{ scale: 0.95 }}
-              whileHover={{ scale: 1.02 }}
-            >
-              <Button
-                onClick={handleComplete}
-                disabled={completing}
-                className="w-full relative overflow-hidden"
-                size="lg"
-              >
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                  initial={{ x: '-100%' }}
-                  whileHover={{ x: '100%' }}
-                  transition={{ duration: 0.6 }}
-                />
-                {completing ? (
-                  "Completing..."
-                ) : (
-                  <>
-                    <Check className="w-5 h-5 mr-2" />
-                    Complete Today
-                  </>
-                )}
-              </Button>
-            </motion.div>
+          ) : (
+            <HabitStreakCalendar logs={filteredLogs} viewDays={viewDays} />
           )}
-
-          <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
-                {advancedOpen ? "Hide" : "Show"} Advanced Options
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="mt-4">
-              <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5">
-                <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
-                <p className="text-xs text-muted-foreground mb-3">
-                  Deleting moves this habit to Trash. You can restore it within 30 days.
-                </p>
-                <Button
-                  onClick={() => setDeleteDialogOpen(true)}
-                  variant="destructive"
-                  size="sm"
-                  className="w-full"
-                >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Habit
-                </Button>
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
         </div>
-      </DialogContent>
+
+        <div className="md:w-48">
+          <StreakStats
+            currentStreak={streak.current_count}
+            bestStreak={streak.best_count}
+            completionRate={{ completed: completedInView, total: viewDays }}
+          />
+        </div>
+      </div>
+
+      {!todayCompleted && (
+        <motion.div
+          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.02 }}
+        >
+          <Button
+            onClick={handleComplete}
+            disabled={completing}
+            className="w-full relative overflow-hidden"
+            size="lg"
+          >
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              initial={{ x: '-100%' }}
+              whileHover={{ x: '100%' }}
+              transition={{ duration: 0.6 }}
+            />
+            {completing ? (
+              "Completing..."
+            ) : (
+              <>
+                <Check className="w-5 h-5 mr-2" />
+                Complete Today
+              </>
+            )}
+          </Button>
+        </motion.div>
+      )}
+
+      <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+        <CollapsibleTrigger asChild>
+          <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground">
+            {advancedOpen ? "Hide" : "Show"} Advanced Options
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-4">
+          <div className="border border-destructive/20 rounded-lg p-4 bg-destructive/5">
+            <h4 className="text-sm font-semibold text-destructive mb-2">Danger Zone</h4>
+            <p className="text-xs text-muted-foreground mb-3">
+              Deleting moves this habit to Trash. You can restore it within 30 days.
+            </p>
+            <Button
+              onClick={() => setDeleteDialogOpen(true)}
+              variant="destructive"
+              size="sm"
+              className="w-full"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete Habit
+            </Button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <>
+        <Drawer open={open} onOpenChange={onOpenChange}>
+          <DrawerContent className="bg-popover border-border">
+            <DrawerHeader>
+              <DrawerTitle className="text-2xl font-bold">{habit?.title}</DrawerTitle>
+            </DrawerHeader>
+            <div className="px-4 pb-6 max-h-[80vh] overflow-y-auto">
+              {dialogContent}
+            </div>
+          </DrawerContent>
+        </Drawer>
+
+        <DeleteConfirmDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleDelete}
+          habitName={habit?.title || ""}
+          currentStreak={streak.current_count}
+          bestStreak={streak.best_count}
+          totalLogs={logs.length}
+        />
+
+        <CompletionConfetti 
+          show={showConfetti} 
+          intensity={habit?.difficulty === 'hard' ? 'high' : habit?.difficulty === 'medium' ? 'medium' : 'low'} 
+        />
+        <XPGainAnimation 
+          show={showXP} 
+          xp={habit ? { easy: 10, medium: 15, hard: 20 }[habit.difficulty] : 0} 
+          onComplete={() => setShowXP(false)}
+        />
+        <StreakMilestone
+          show={showMilestone}
+          streakCount={(streak?.current_count || 0) + 1}
+          onClose={() => setShowMilestone(false)}
+        />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-popover border-border">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">{habit?.title}</DialogTitle>
+          </DialogHeader>
+          {dialogContent}
+        </DialogContent>
+      </Dialog>
 
       <DeleteConfirmDialog
         open={deleteDialogOpen}
@@ -305,6 +355,6 @@ export const HabitDetailDialog = ({
         streakCount={(streak?.current_count || 0) + 1}
         onClose={() => setShowMilestone(false)}
       />
-    </Dialog>
+    </>
   );
 };

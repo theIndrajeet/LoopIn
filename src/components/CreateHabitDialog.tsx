@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Drawer, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -26,6 +28,7 @@ const PREMADE_SUGGESTIONS = [
 ];
 
 export const CreateHabitDialog = ({ onHabitCreated }: CreateHabitDialogProps) => {
+  const isMobile = useIsMobile();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
@@ -106,6 +109,103 @@ export const CreateHabitDialog = ({ onHabitCreated }: CreateHabitDialogProps) =>
     setShowSuggestions(false);
   };
 
+  const formContent = (
+    <>
+      <div className="flex flex-col sm:flex-row gap-2 mb-4">
+        <Button variant="secondary" onClick={showQuickPicks} disabled={loadingAI} className="flex-1">
+          <Lightbulb className="w-4 h-4 mr-2" />
+          Quick Picks
+        </Button>
+        <Button onClick={getAISuggestions} disabled={loadingAI} className="flex-1">
+          {loadingAI ? (
+            <>Loading...</>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Ask AI
+            </>
+          )}
+        </Button>
+      </div>
+
+      {showSuggestions && (
+        <div className="mb-4 max-h-60 overflow-y-auto">
+          <div className="grid grid-cols-2 gap-2">
+            {loadingAI ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 bg-card/50" />
+              ))
+            ) : (
+              suggestions.map((suggestion, idx) => (
+                <HabitSuggestionChip
+                  key={idx}
+                  suggestion={suggestion}
+                  onClick={selectSuggestion}
+                />
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      <form onSubmit={handleCreate} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="title">Habit name</Label>
+          <Input
+            id="title"
+            placeholder="📖 Read for 15 minutes"
+            value={title}
+            onChange={(e) => setTitle(e.target.value.slice(0, 50))}
+            required
+            maxLength={50}
+            className="bg-input border-border text-foreground"
+          />
+          <p className="text-xs text-muted-foreground">Emoji supported! {title.length}/50</p>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="difficulty">Difficulty</Label>
+          <Select value={difficulty} onValueChange={(v: any) => setDifficulty(v)}>
+            <SelectTrigger id="difficulty" className="bg-input border-border">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-popover border-border">
+              <SelectItem value="easy">Easy (10 XP)</SelectItem>
+              <SelectItem value="medium">Medium (15 XP)</SelectItem>
+              <SelectItem value="hard">Hard (20 XP)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button type="submit" className="w-full" disabled={loading}>
+          {loading ? "Creating..." : "Create Habit"}
+        </Button>
+      </form>
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={setOpen}>
+        <DrawerTrigger asChild>
+          <Button size="lg" className="gap-2">
+            <Plus className="w-5 h-5" />
+            New Habit
+          </Button>
+        </DrawerTrigger>
+        <DrawerContent className="bg-popover border-border">
+          <DrawerHeader>
+            <DrawerTitle className="text-xl sm:text-2xl">Create a new habit</DrawerTitle>
+            <DrawerDescription className="text-sm sm:text-base">
+              Choose something you want to do daily to build a strong streak.
+            </DrawerDescription>
+          </DrawerHeader>
+          <div className="px-4 pb-6 max-h-[70vh] overflow-y-auto">
+            {formContent}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -121,75 +221,7 @@ export const CreateHabitDialog = ({ onHabitCreated }: CreateHabitDialogProps) =>
             Choose something you want to do daily to build a strong streak.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="flex flex-col sm:flex-row gap-2 mb-4">
-          <Button variant="secondary" onClick={showQuickPicks} disabled={loadingAI} className="flex-1">
-            <Lightbulb className="w-4 h-4 mr-2" />
-            Quick Picks
-          </Button>
-          <Button onClick={getAISuggestions} disabled={loadingAI} className="flex-1">
-            {loadingAI ? (
-              <>Loading...</>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 mr-2" />
-                Ask AI
-              </>
-            )}
-          </Button>
-        </div>
-
-        {showSuggestions && (
-          <div className="mb-4 max-h-60 overflow-y-auto">
-            <div className="grid grid-cols-2 gap-2">
-              {loadingAI ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-16 bg-card/50" />
-                ))
-              ) : (
-                suggestions.map((suggestion, idx) => (
-                  <HabitSuggestionChip
-                    key={idx}
-                    suggestion={suggestion}
-                    onClick={selectSuggestion}
-                  />
-                ))
-              )}
-            </div>
-          </div>
-        )}
-
-        <form onSubmit={handleCreate} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Habit name</Label>
-            <Input
-              id="title"
-              placeholder="📖 Read for 15 minutes"
-              value={title}
-              onChange={(e) => setTitle(e.target.value.slice(0, 50))}
-              required
-              maxLength={50}
-              className="bg-input border-border text-foreground"
-            />
-            <p className="text-xs text-muted-foreground">Emoji supported! {title.length}/50</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="difficulty">Difficulty</Label>
-            <Select value={difficulty} onValueChange={(v: any) => setDifficulty(v)}>
-              <SelectTrigger id="difficulty" className="bg-input border-border">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-popover border-border">
-                <SelectItem value="easy">Easy (10 XP)</SelectItem>
-                <SelectItem value="medium">Medium (15 XP)</SelectItem>
-                <SelectItem value="hard">Hard (20 XP)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating..." : "Create Habit"}
-          </Button>
-        </form>
+        {formContent}
       </DialogContent>
     </Dialog>
   );
