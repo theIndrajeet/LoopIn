@@ -274,6 +274,83 @@ export type Database = {
         }
         Relationships: []
       }
+      task_subtasks: {
+        Row: {
+          completed: boolean
+          created_at: string
+          id: string
+          order_index: number | null
+          task_id: string
+          title: string
+        }
+        Insert: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          order_index?: number | null
+          task_id: string
+          title: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          id?: string
+          order_index?: number | null
+          task_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_subtasks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          order_index: number | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          title: string
+          user_id: string
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          order_index?: number | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          title: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          order_index?: number | null
+          priority?: Database["public"]["Enums"]["task_priority"]
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           celebrations_enabled: boolean | null
@@ -352,6 +429,7 @@ export type Database = {
       friendship_status: "pending" | "accepted" | "rejected"
       habit_difficulty: "easy" | "medium" | "hard"
       privacy_level: "public" | "friends" | "private"
+      task_priority: "low" | "medium" | "high" | "urgent"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -482,6 +560,7 @@ export const Constants = {
       friendship_status: ["pending", "accepted", "rejected"],
       habit_difficulty: ["easy", "medium", "hard"],
       privacy_level: ["public", "friends", "private"],
+      task_priority: ["low", "medium", "high", "urgent"],
     },
   },
 } as const
