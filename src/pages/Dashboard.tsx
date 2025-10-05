@@ -9,6 +9,9 @@ import { FloatingSuggestionFAB } from "@/components/FloatingSuggestionFAB";
 import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Archive, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableHabitCard } from "@/components/SortableHabitCard";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -65,7 +68,12 @@ export default function Dashboard() {
       let habitsQuery = supabase.from("habits").select("*").eq("user_id", user.id);
 
       if (viewMode === "active") {
-        habitsQuery = habitsQuery.eq("active", true).is("archived_at", null).is("deleted_at", null);
+        habitsQuery = habitsQuery
+          .eq("active", true)
+          .is("archived_at", null)
+          .is("deleted_at", null)
+          .order('order_index', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: true });
       } else if (viewMode === "archived") {
         habitsQuery = habitsQuery.eq("active", false).not("archived_at", "is", null).is("deleted_at", null);
       } else if (viewMode === "trash") {
@@ -100,6 +108,49 @@ export default function Dashboard() {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = habits.findIndex((h) => h.id === active.id);
+    const newIndex = habits.findIndex((h) => h.id === over.id);
+
+    const newHabits = arrayMove(habits, oldIndex, newIndex);
+    setHabits(newHabits);
+
+    // Update order_index for all habits
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const updates = newHabits.map((habit, index) => ({
+        id: habit.id,
+        order_index: index,
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from('habits')
+          .update({ order_index: update.order_index })
+          .eq('id', update.id);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to save habit order",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -208,18 +259,23 @@ export default function Dashboard() {
 
         {viewMode === "active" && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
-              {habits.map((habit, idx) => (
-                <div key={habit.id} style={{ animationDelay: `${idx * 50}ms` }}>
-                  <HabitCard
-                    habit={habit}
-                    isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
-                    onComplete={fetchData}
-                    onArchive={fetchData}
-                  />
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={habits.map(h => h.id)} strategy={verticalListSortingStrategy}>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
+                  {habits.map((habit, idx) => (
+                    <SortableHabitCard
+                      key={habit.id}
+                      id={habit.id}
+                      habit={habit}
+                      isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
+                      onComplete={fetchData}
+                      onArchive={fetchData}
+                      style={{ animationDelay: `${idx * 50}ms` }}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
 
             {habits.length === 0 && (
               <div className="text-center py-12">

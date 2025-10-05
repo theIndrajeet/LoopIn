@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, Flame, Archive, MoreVertical } from "lucide-react";
+import { Check, Flame, Archive, MoreVertical, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { HabitDetailDialog } from "./HabitDetailDialog";
@@ -18,6 +18,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface HabitCardProps {
   habit: any;
@@ -38,13 +48,77 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
   const [completionRate, setCompletionRate] = useState<number | null>(null);
   const [lastLogId, setLastLogId] = useState<string | null>(null);
   const [isAtRisk, setIsAtRisk] = useState(false);
+  const [freezeTokens, setFreezeTokens] = useState(0);
+  const [showFreezeDialog, setShowFreezeDialog] = useState(false);
   const { play } = useSound();
 
   useEffect(() => {
     fetchStreakData();
     fetchCompletionRate();
     checkAtRisk();
+    fetchFreezeTokens();
   }, [habit.id, isCompletedToday]);
+
+  const fetchFreezeTokens = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('user_preferences')
+      .select('freeze_tokens_remaining')
+      .eq('user_id', user.id)
+      .single();
+
+    if (data) {
+      setFreezeTokens(data.freeze_tokens_remaining || 0);
+    }
+  };
+
+  const handleUseFreeze = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Decrement freeze tokens
+      const { error: prefsError } = await supabase
+        .from('user_preferences')
+        .update({ freeze_tokens_remaining: freezeTokens - 1 })
+        .eq('user_id', user.id);
+
+      if (prefsError) throw prefsError;
+
+      // Mark freeze used for this habit today
+      const { error: streakError } = await supabase
+        .from('streaks')
+        .update({ freeze_used_on: new Date().toISOString().split('T')[0] })
+        .eq('habit_id', habit.id);
+
+      if (streakError) throw streakError;
+
+      // Track event
+      await supabase.from('suggestion_events').insert({
+        user_id: user.id,
+        suggestion_type: 'freeze_token',
+        action: 'freeze_token_used',
+        suggestion_id: habit.id,
+      });
+
+      toast({
+        title: "Freeze used ❄️",
+        description: `Streak protected! (${freezeTokens - 1} tokens remaining)`,
+      });
+
+      setShowFreezeDialog(false);
+      setIsAtRisk(false);
+      await fetchFreezeTokens();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   const checkAtRisk = () => {
     const currentHour = new Date().getHours();
@@ -308,6 +382,12 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                {isAtRisk && freezeTokens > 0 && (
+                  <DropdownMenuItem onClick={() => setShowFreezeDialog(true)}>
+                    <Shield className="h-4 w-4 mr-2" />
+                    Use Freeze ({freezeTokens} left)
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleArchive} disabled={archiving}>
                   <Archive className="h-4 w-4 mr-2" />
                   Archive
@@ -388,6 +468,23 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
         streakCount={(streak?.current_count || 0) + 1}
         onClose={() => setShowMilestone(false)}
       />
+
+      <AlertDialog open={showFreezeDialog} onOpenChange={setShowFreezeDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Use a Freeze to protect today's streak?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will protect your {streak?.current_count || 0}-day streak from breaking today. You have {freezeTokens} freeze tokens remaining this month.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleUseFreeze}>
+              Use Freeze
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };

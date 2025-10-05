@@ -58,6 +58,7 @@ export type Database = {
           deleted_at: string | null
           difficulty: Database["public"]["Enums"]["habit_difficulty"] | null
           id: string
+          order_index: number | null
           schedule_days: number[] | null
           suggestion_source: string | null
           title: string
@@ -71,6 +72,7 @@ export type Database = {
           deleted_at?: string | null
           difficulty?: Database["public"]["Enums"]["habit_difficulty"] | null
           id?: string
+          order_index?: number | null
           schedule_days?: number[] | null
           suggestion_source?: string | null
           title: string
@@ -84,6 +86,7 @@ export type Database = {
           deleted_at?: string | null
           difficulty?: Database["public"]["Enums"]["habit_difficulty"] | null
           id?: string
+          order_index?: number | null
           schedule_days?: number[] | null
           suggestion_source?: string | null
           title?: string
@@ -127,6 +130,7 @@ export type Database = {
           created_at: string | null
           current_count: number | null
           freeze_tokens_used: number | null
+          freeze_used_on: string | null
           habit_id: string
           id: string
           last_completed_date: string | null
@@ -136,6 +140,7 @@ export type Database = {
           created_at?: string | null
           current_count?: number | null
           freeze_tokens_used?: number | null
+          freeze_used_on?: string | null
           habit_id: string
           id?: string
           last_completed_date?: string | null
@@ -145,6 +150,7 @@ export type Database = {
           created_at?: string | null
           current_count?: number | null
           freeze_tokens_used?: number | null
+          freeze_used_on?: string | null
           habit_id?: string
           id?: string
           last_completed_date?: string | null
@@ -195,6 +201,8 @@ export type Database = {
           dismissed_progressive_prompts: string[] | null
           energy_level: string | null
           experience_level: string | null
+          freeze_tokens_remaining: number | null
+          freeze_tokens_reset_at: string | null
           living_situation: string | null
           main_struggles: string[] | null
           onboarding_completed: boolean | null
@@ -210,6 +218,8 @@ export type Database = {
           dismissed_progressive_prompts?: string[] | null
           energy_level?: string | null
           experience_level?: string | null
+          freeze_tokens_remaining?: number | null
+          freeze_tokens_reset_at?: string | null
           living_situation?: string | null
           main_struggles?: string[] | null
           onboarding_completed?: boolean | null
@@ -225,6 +235,8 @@ export type Database = {
           dismissed_progressive_prompts?: string[] | null
           energy_level?: string | null
           experience_level?: string | null
+          freeze_tokens_remaining?: number | null
+          freeze_tokens_reset_at?: string | null
           living_situation?: string | null
           main_struggles?: string[] | null
           onboarding_completed?: boolean | null
