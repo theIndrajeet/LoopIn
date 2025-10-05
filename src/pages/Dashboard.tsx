@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CreateHabitDialog } from "@/components/CreateHabitDialog";
 import { HabitCard } from "@/components/HabitCard";
+import { FloatingSuggestionFAB } from "@/components/FloatingSuggestionFAB";
 import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Archive, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -222,8 +223,11 @@ export default function Dashboard() {
 
             {habits.length === 0 && (
               <div className="text-center py-12">
-                <p className="text-muted-foreground mb-4">
-                  No active habits. Create your first one to get started!
+                <p className="text-xl font-medium mb-2 text-foreground">
+                  Your first habit is the hardest—let's make it easy.
+                </p>
+                <p className="text-muted-foreground mb-6">
+                  Start with one small habit and watch your progress grow.
                 </p>
                 <CreateHabitDialog onHabitCreated={fetchData} />
               </div>
@@ -332,6 +336,10 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {viewMode === "active" && (
+        <FloatingSuggestionFAB habitCount={habits.length} onHabitCreated={fetchData} />
+      )}
     </div>
   );
 }
