@@ -110,6 +110,16 @@ All colors MUST be HSL.
     animation: float 3s ease-in-out infinite;
   }
 
+  @keyframes checkmark {
+    0% { stroke-dashoffset: 100; }
+    100% { stroke-dashoffset: 0; }
+  }
+
+  .checkmark-animate {
+    stroke-dasharray: 100;
+    animation: checkmark 0.4s ease-out forwards;
+  }
+
   /* Touch optimizations */
   .touch-manipulation {
     touch-action: manipulation;

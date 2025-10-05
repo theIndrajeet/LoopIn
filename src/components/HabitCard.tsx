@@ -7,6 +7,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { HabitDetailDialog } from "./HabitDetailDialog";
 import { subDays, startOfDay, isSameDay } from "date-fns";
+import { motion } from "framer-motion";
+import { useSound } from "@/hooks/use-sound";
+import { CompletionConfetti } from "./CompletionConfetti";
+import { XPGainAnimation } from "./XPGainAnimation";
+import { StreakMilestone } from "./StreakMilestone";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,6 +32,10 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
   const [streak, setStreak] = useState<any>(null);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [archiving, setArchiving] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showXP, setShowXP] = useState(false);
+  const [showMilestone, setShowMilestone] = useState(false);
+  const { play } = useSound();
 
   useEffect(() => {
     fetchStreakData();
@@ -47,11 +56,17 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
     if (logsResult.data) setRecentLogs(logsResult.data);
   };
 
-  const handleComplete = async () => {
+  const handleComplete = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     setLoading(true);
     try {
       const xpMap = { easy: 10, medium: 15, hard: 20 };
       const xp = xpMap[habit.difficulty as keyof typeof xpMap];
+      const soundMap = { 
+        easy: 'complete' as const, 
+        medium: 'complete-medium' as const, 
+        hard: 'complete-hard' as const 
+      };
 
       const { error } = await supabase
         .from("habit_logs")
@@ -62,13 +77,32 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
 
       if (error) throw error;
 
+      // Trigger celebrations
+      play(soundMap[habit.difficulty as keyof typeof soundMap]);
+      setShowConfetti(true);
+      setShowXP(true);
+      
+      // Vibrate on mobile
+      if ('vibrate' in navigator) {
+        navigator.vibrate([50, 100, 50]);
+      }
+
       toast({
         title: "Habit completed! 🎉",
         description: `+${xp} XP earned`,
       });
 
       onComplete();
-      fetchStreakData();
+      await fetchStreakData();
+      
+      // Check for streak milestones
+      const newStreak = (streak?.current_count || 0) + 1;
+      if ([7, 30, 100].includes(newStreak)) {
+        setTimeout(() => {
+          play('streak-milestone');
+          setShowMilestone(true);
+        }, 1500);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -77,6 +111,9 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
       });
     } finally {
       setLoading(false);
+      setTimeout(() => {
+        setShowConfetti(false);
+      }, 2000);
     }
   };
 
@@ -183,24 +220,33 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
           <span className="text-sm text-muted-foreground">
             +{xpMap[habit.difficulty as keyof typeof xpMap]} XP
           </span>
-          <Button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleComplete();
-            }}
-            disabled={isCompletedToday || loading}
-            variant={isCompletedToday ? "secondary" : "default"}
-            size="sm"
+          <motion.div
+            whileTap={{ scale: 0.9 }}
+            whileHover={{ scale: 1.05 }}
           >
-            {isCompletedToday ? (
-              <>
-                <Check className="w-4 h-4 mr-1" />
-                Done
-              </>
-            ) : (
-              "Complete"
-            )}
-          </Button>
+            <Button
+              onClick={handleComplete}
+              disabled={isCompletedToday || loading}
+              variant={isCompletedToday ? "secondary" : "default"}
+              size="sm"
+              className="relative overflow-hidden"
+            >
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                initial={{ x: '-100%' }}
+                whileHover={{ x: '100%' }}
+                transition={{ duration: 0.6 }}
+              />
+              {isCompletedToday ? (
+                <>
+                  <Check className="w-4 h-4 mr-1" />
+                  Done
+                </>
+              ) : (
+                "Complete"
+              )}
+            </Button>
+          </motion.div>
         </div>
       </Card>
 
@@ -214,6 +260,21 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
         }}
         onHabitDeleted={onComplete}
         todayCompleted={isCompletedToday}
+      />
+
+      <CompletionConfetti 
+        show={showConfetti} 
+        intensity={habit.difficulty === 'hard' ? 'high' : habit.difficulty === 'medium' ? 'medium' : 'low'} 
+      />
+      <XPGainAnimation 
+        show={showXP} 
+        xp={xpMap[habit.difficulty as keyof typeof xpMap]} 
+        onComplete={() => setShowXP(false)}
+      />
+      <StreakMilestone
+        show={showMilestone}
+        streakCount={(streak?.current_count || 0) + 1}
+        onClose={() => setShowMilestone(false)}
       />
     </>
   );

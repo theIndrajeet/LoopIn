@@ -10,6 +10,11 @@ import { Check, Trash2 } from "lucide-react";
 import { subDays, startOfDay, isSameDay } from "date-fns";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { motion } from "framer-motion";
+import { useSound } from "@/hooks/use-sound";
+import { CompletionConfetti } from "./CompletionConfetti";
+import { XPGainAnimation } from "./XPGainAnimation";
+import { StreakMilestone } from "./StreakMilestone";
 
 interface Habit {
   id: string;
@@ -50,6 +55,10 @@ export const HabitDetailDialog = ({
   const [completing, setCompleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showXP, setShowXP] = useState(false);
+  const [showMilestone, setShowMilestone] = useState(false);
+  const { play } = useSound();
 
   useEffect(() => {
     if (open && habit) {
@@ -94,6 +103,11 @@ export const HabitDetailDialog = ({
     try {
       const xpMap = { easy: 10, medium: 15, hard: 20 };
       const xp = xpMap[habit.difficulty];
+      const soundMap = { 
+        easy: 'complete' as const, 
+        medium: 'complete-medium' as const, 
+        hard: 'complete-hard' as const 
+      };
 
       const { error } = await supabase
         .from('habit_logs')
@@ -104,6 +118,16 @@ export const HabitDetailDialog = ({
 
       if (error) throw error;
 
+      // Trigger celebrations
+      play(soundMap[habit.difficulty]);
+      setShowConfetti(true);
+      setShowXP(true);
+      
+      // Vibrate on mobile
+      if ('vibrate' in navigator) {
+        navigator.vibrate([50, 100, 50]);
+      }
+
       toast({
         title: "Habit completed! 🎉",
         description: `+${xp} XP earned`,
@@ -111,6 +135,15 @@ export const HabitDetailDialog = ({
 
       onHabitCompleted();
       await fetchHabitData();
+      
+      // Check for streak milestones
+      const newStreak = (streak?.current_count || 0) + 1;
+      if ([7, 30, 100].includes(newStreak)) {
+        setTimeout(() => {
+          play('streak-milestone');
+          setShowMilestone(true);
+        }, 1500);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -119,6 +152,9 @@ export const HabitDetailDialog = ({
       });
     } finally {
       setCompleting(false);
+      setTimeout(() => {
+        setShowConfetti(false);
+      }, 2000);
     }
   };
 
@@ -190,21 +226,32 @@ export const HabitDetailDialog = ({
           </div>
 
           {!todayCompleted && (
-            <Button
-              onClick={handleComplete}
-              disabled={completing}
-              className="w-full"
-              size="lg"
+            <motion.div
+              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.02 }}
             >
-              {completing ? (
-                "Completing..."
-              ) : (
-                <>
-                  <Check className="w-5 h-5 mr-2" />
-                  Complete Today
-                </>
-              )}
-            </Button>
+              <Button
+                onClick={handleComplete}
+                disabled={completing}
+                className="w-full relative overflow-hidden"
+                size="lg"
+              >
+                <motion.div
+                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                  initial={{ x: '-100%' }}
+                  whileHover={{ x: '100%' }}
+                  transition={{ duration: 0.6 }}
+                />
+                {completing ? (
+                  "Completing..."
+                ) : (
+                  <>
+                    <Check className="w-5 h-5 mr-2" />
+                    Complete Today
+                  </>
+                )}
+              </Button>
+            </motion.div>
           )}
 
           <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
@@ -242,6 +289,21 @@ export const HabitDetailDialog = ({
         currentStreak={streak.current_count}
         bestStreak={streak.best_count}
         totalLogs={logs.length}
+      />
+
+      <CompletionConfetti 
+        show={showConfetti} 
+        intensity={habit?.difficulty === 'hard' ? 'high' : habit?.difficulty === 'medium' ? 'medium' : 'low'} 
+      />
+      <XPGainAnimation 
+        show={showXP} 
+        xp={habit ? { easy: 10, medium: 15, hard: 20 }[habit.difficulty] : 0} 
+        onComplete={() => setShowXP(false)}
+      />
+      <StreakMilestone
+        show={showMilestone}
+        streakCount={(streak?.current_count || 0) + 1}
+        onClose={() => setShowMilestone(false)}
       />
     </Dialog>
   );
