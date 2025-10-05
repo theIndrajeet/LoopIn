@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Trophy, Users, Crown, Medal, Award, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
+import { motion } from "framer-motion";
 
 interface LeaderboardUser {
   id: string;
@@ -190,17 +191,34 @@ export default function Leaderboard() {
     }
 
     return (
-      <div className="space-y-3">
+      <motion.div 
+        className="space-y-3"
+        initial="hidden"
+        animate="show"
+        variants={{
+          hidden: { opacity: 0 },
+          show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.05 }
+          }
+        }}
+      >
         {users.map((user) => (
-          <Card
+          <motion.div
             key={user.id}
-            onClick={() => handleUserClick(user.id)}
-            className={`p-4 transition-all hover:scale-[1.02] cursor-pointer ${
-              user.id === currentUserId
-                ? "border-primary bg-primary/5"
-                : "bg-surface/50"
-            }`}
+            variants={{
+              hidden: { opacity: 0, y: 20 },
+              show: { opacity: 1, y: 0 }
+            }}
           >
+            <Card
+              onClick={() => handleUserClick(user.id)}
+              className={`p-4 transition-all hover:scale-[1.02] cursor-pointer ${
+                user.id === currentUserId
+                  ? "border-primary bg-primary/5"
+                  : "bg-surface/50"
+              }`}
+            >
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-3 flex-shrink-0">
                 {getRankIcon(user.rank)}
@@ -231,10 +249,11 @@ export default function Leaderboard() {
                   {getRankIcon(user.rank)}
                 </div>
               )}
-            </div>
-          </Card>
+              </div>
+            </Card>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     );
   };
 

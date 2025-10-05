@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { ActivityItem } from './ActivityItem';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Users } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ActivityItemSkeleton } from './skeletons/ActivityItemSkeleton';
 
 export const ActivityFeed = () => {
   const [events, setEvents] = useState<any[]>([]);
@@ -39,9 +41,13 @@ export const ActivityFeed = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-      </div>
+      <ScrollArea className="h-[500px] pr-4">
+        <div className="space-y-3">
+          {[...Array(5)].map((_, i) => (
+            <ActivityItemSkeleton key={i} />
+          ))}
+        </div>
+      </ScrollArea>
     );
   }
 
@@ -59,11 +65,30 @@ export const ActivityFeed = () => {
 
   return (
     <ScrollArea className="h-[500px] pr-4">
-      <div className="space-y-3">
+      <motion.div 
+        className="space-y-3"
+        initial="hidden"
+        animate="show"
+        variants={{
+          hidden: { opacity: 0 },
+          show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.05 }
+          }
+        }}
+      >
         {events.map((event) => (
-          <ActivityItem key={event.id} event={event} />
+          <motion.div
+            key={event.id}
+            variants={{
+              hidden: { opacity: 0, y: 10 },
+              show: { opacity: 1, y: 0 }
+            }}
+          >
+            <ActivityItem event={event} />
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </ScrollArea>
   );
 };

@@ -12,6 +12,8 @@ import { InviteFriendsDialog } from "@/components/InviteFriendsDialog";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { UserProfileDialog } from "@/components/UserProfileDialog";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
+import { FriendCardSkeleton } from "@/components/skeletons/FriendCardSkeleton";
 
 interface Profile {
   id: string;
@@ -28,6 +30,7 @@ export default function Friends() {
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
@@ -105,6 +108,7 @@ export default function Friends() {
     }
 
     try {
+      setSearching(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -120,6 +124,8 @@ export default function Friends() {
     } catch (error: any) {
       console.error("Error searching users:", error);
       toast.error("Failed to search users");
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -319,19 +325,47 @@ export default function Friends() {
           </TabsList>
 
           <TabsContent value="friends" className="mt-6 space-y-3">
-            {friends.length === 0 ? (
-              <div className="text-center py-12">
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(5)].map((_, i) => (
+                  <FriendCardSkeleton key={i} />
+                ))}
+              </div>
+            ) : friends.length === 0 ? (
+              <motion.div 
+                className="text-center py-12"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+              >
                 <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                 <p className="text-muted-foreground mb-2">No friends yet</p>
                 <p className="text-sm text-muted-foreground">Send friend requests to connect with others!</p>
-              </div>
+              </motion.div>
             ) : (
-              friends.map((friend) => (
-                <Card 
-                  key={friend.id} 
-                  onClick={() => handleUserClick(friend.id)}
-                  className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
-                >
+              <motion.div
+                initial="hidden"
+                animate="show"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.05 }
+                  }
+                }}
+                className="space-y-3"
+              >
+                {friends.map((friend) => (
+                  <motion.div
+                    key={friend.id}
+                    variants={{
+                      hidden: { opacity: 0, x: -20 },
+                      show: { opacity: 1, x: 0 }
+                    }}
+                  >
+                    <Card 
+                      onClick={() => handleUserClick(friend.id)}
+                      className="p-4 cursor-pointer hover:bg-accent/50 transition-colors"
+                    >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Avatar>
@@ -356,19 +390,50 @@ export default function Friends() {
                     >
                       <UserMinus className="h-4 w-4" />
                     </Button>
-                  </div>
-                </Card>
-              ))
+                      </div>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
             )}
           </TabsContent>
 
           <TabsContent value="pending" className="mt-6 space-y-3">
-            {pendingRequests.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No pending requests</p>
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <FriendCardSkeleton key={i} />
+                ))}
               </div>
+            ) : pendingRequests.length === 0 ? (
+              <motion.div 
+                className="text-center py-12"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <p className="text-muted-foreground">No pending requests</p>
+              </motion.div>
             ) : (
-              pendingRequests.map((request) => (
+              <motion.div
+                initial="hidden"
+                animate="show"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.05 }
+                  }
+                }}
+                className="space-y-3"
+              >
+                {pendingRequests.map((request) => (
+                  <motion.div
+                    key={request.id}
+                    variants={{
+                      hidden: { opacity: 0, x: -20 },
+                      show: { opacity: 1, x: 0 }
+                    }}
+                  >
                 <Card 
                   key={request.id} 
                   onClick={() => handleUserClick(request.id)}
@@ -400,19 +465,50 @@ export default function Friends() {
                         <X className="h-4 w-4" />
                       </Button>
                     </div>
-                  </div>
-                </Card>
-              ))
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
             )}
           </TabsContent>
 
           <TabsContent value="sent" className="mt-6 space-y-3">
-            {sentRequests.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No sent requests</p>
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(3)].map((_, i) => (
+                  <FriendCardSkeleton key={i} />
+                ))}
               </div>
+            ) : sentRequests.length === 0 ? (
+              <motion.div 
+                className="text-center py-12"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+              >
+                <p className="text-muted-foreground">No sent requests</p>
+              </motion.div>
             ) : (
-              sentRequests.map((request) => (
+              <motion.div
+                initial="hidden"
+                animate="show"
+                variants={{
+                  hidden: { opacity: 0 },
+                  show: {
+                    opacity: 1,
+                    transition: { staggerChildren: 0.05 }
+                  }
+                }}
+                className="space-y-3"
+              >
+                {sentRequests.map((request) => (
+                  <motion.div
+                    key={request.id}
+                    variants={{
+                      hidden: { opacity: 0, x: -20 },
+                      show: { opacity: 1, x: 0 }
+                    }}
+                  >
                 <Card 
                   key={request.id} 
                   onClick={() => handleUserClick(request.id)}
@@ -429,9 +525,11 @@ export default function Friends() {
                         <Badge variant="secondary">Pending</Badge>
                       </p>
                     </div>
-                  </div>
-                </Card>
-              ))
+                    </div>
+                  </Card>
+                </motion.div>
+              ))}
+            </motion.div>
             )}
           </TabsContent>
 
