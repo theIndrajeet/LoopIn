@@ -7,6 +7,8 @@ import { CreateHabitDialog } from "@/components/CreateHabitDialog";
 import { CreateTaskDialog } from "@/components/CreateTaskDialog";
 import { HabitCard } from "@/components/HabitCard";
 import { TaskDetailDialog } from "@/components/TaskDetailDialog";
+import { HabitCardSkeleton } from "@/components/skeletons/HabitCardSkeleton";
+import { TaskCardSkeleton } from "@/components/skeletons/TaskCardSkeleton";
 
 import { TodayProgressRing } from "@/components/TodayProgressRing";
 import { DashboardBanner } from "@/components/DashboardBanner";
@@ -114,13 +116,8 @@ export default function Dashboard() {
   };
 
   const fetchData = async () => {
-    // Clear state immediately to prevent showing stale data during async fetch
-    if (contentType === "habits") {
-      setHabits([]);
-    } else {
-      setTasks([]);
-    }
-
+    setLoading(true);
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -390,32 +387,42 @@ export default function Dashboard() {
 
             {viewMode === "active" && (
           <>
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={habitsScheduledToday.map(h => h.id)} strategy={verticalListSortingStrategy}>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
-                  {habitsScheduledToday.map((habit, idx) => (
-                    <SortableHabitCard
-                      key={habit.id}
-                      id={habit.id}
-                      habit={habit}
-                      isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
-                      onComplete={fetchData}
-                      style={{ animationDelay: `${idx * 50}ms` }}
-                    />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-
-            {habitsScheduledToday.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-xl font-medium mb-2 text-foreground">
-                  Your first habit is the hardest—let's make it easy.
-                </p>
-                <p className="text-muted-foreground">
-                  Start with one small habit and watch your progress grow.
-                </p>
+            {loading ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i}><HabitCardSkeleton /></div>
+                ))}
               </div>
+            ) : (
+              <>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                  <SortableContext items={habitsScheduledToday.map(h => h.id)} strategy={verticalListSortingStrategy}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
+                      {habitsScheduledToday.map((habit, idx) => (
+                        <SortableHabitCard
+                          key={habit.id}
+                          id={habit.id}
+                          habit={habit}
+                          isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
+                          onComplete={fetchData}
+                          style={{ animationDelay: `${idx * 50}ms` }}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+
+                {habitsScheduledToday.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-xl font-medium mb-2 text-foreground">
+                      Your first habit is the hardest—let's make it easy.
+                    </p>
+                    <p className="text-muted-foreground">
+                      Start with one small habit and watch your progress grow.
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
@@ -543,50 +550,60 @@ export default function Dashboard() {
 
             {viewMode === "active" && (
               <>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
-                    <div className="grid grid-cols-1 gap-3 sm:gap-4 animate-fade-in">
-                      {tasks.map((task, idx) => (
-                        <SortableTaskCard
-                          key={task.id}
-                          id={task.id}
-                          task={task}
-                          onComplete={async () => {
-                            await supabase.from("tasks").update({ 
-                              completed: true, 
-                              completed_at: new Date().toISOString() 
-                            }).eq("id", task.id);
-                            fetchData();
-                            toast({ title: "Task completed!" });
-                          }}
-                          onDelete={async () => {
-                            await supabase.from("tasks").update({ 
-                              deleted_at: new Date().toISOString() 
-                            }).eq("id", task.id);
-                            fetchData();
-                            toast({ title: "Task moved to trash" });
-                          }}
-                          onClick={() => {
-                            setSelectedTask(task);
-                            setTaskDetailOpen(true);
-                          }}
-                          style={{ animationDelay: `${idx * 50}ms` }}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-
-                {tasks.length === 0 && (
-                  <div className="text-center py-12">
-                    <ListTodo className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                    <p className="text-xl font-medium mb-2 text-foreground">
-                      No tasks yet!
-                    </p>
-                    <p className="text-muted-foreground">
-                      Create your first task to get organized.
-                    </p>
+                {loading ? (
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i}><TaskCardSkeleton /></div>
+                    ))}
                   </div>
+                ) : (
+                  <>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                      <SortableContext items={tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                        <div className="grid grid-cols-1 gap-3 sm:gap-4 animate-fade-in">
+                          {tasks.map((task, idx) => (
+                            <SortableTaskCard
+                              key={task.id}
+                              id={task.id}
+                              task={task}
+                              onComplete={async () => {
+                                await supabase.from("tasks").update({ 
+                                  completed: true, 
+                                  completed_at: new Date().toISOString() 
+                                }).eq("id", task.id);
+                                fetchData();
+                                toast({ title: "Task completed!" });
+                              }}
+                              onDelete={async () => {
+                                await supabase.from("tasks").update({ 
+                                  deleted_at: new Date().toISOString() 
+                                }).eq("id", task.id);
+                                fetchData();
+                                toast({ title: "Task moved to trash" });
+                              }}
+                              onClick={() => {
+                                setSelectedTask(task);
+                                setTaskDetailOpen(true);
+                              }}
+                              style={{ animationDelay: `${idx * 50}ms` }}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+
+                    {tasks.length === 0 && (
+                      <div className="text-center py-12">
+                        <ListTodo className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <p className="text-xl font-medium mb-2 text-foreground">
+                          No tasks yet!
+                        </p>
+                        <p className="text-muted-foreground">
+                          Create your first task to get organized.
+                        </p>
+                      </div>
+                    )}
+                  </>
                 )}
               </>
             )}
