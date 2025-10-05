@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -387,43 +388,66 @@ export default function Dashboard() {
 
             {viewMode === "active" && (
           <>
-            {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i}><HabitCardSkeleton /></div>
-                ))}
-              </div>
-            ) : (
-              <>
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={habitsScheduledToday.map(h => h.id)} strategy={verticalListSortingStrategy}>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
-                      {habitsScheduledToday.map((habit, idx) => (
-                        <SortableHabitCard
-                          key={habit.id}
-                          id={habit.id}
-                          habit={habit}
-                          isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
-                          onComplete={fetchData}
-                          style={{ animationDelay: `${idx * 50}ms` }}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
+            <AnimatePresence mode="wait">
+              {loading ? (
+                <motion.div 
+                  key="skeleton"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
+                >
+                  {[1, 2, 3].map((i) => (
+                    <HabitCardSkeleton key={i} delay={i * 100} />
+                  ))}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="content"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={habitsScheduledToday.map(h => h.id)} strategy={verticalListSortingStrategy}>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        {habitsScheduledToday.map((habit, idx) => (
+                          <motion.div
+                            key={habit.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.05, duration: 0.3 }}
+                          >
+                            <SortableHabitCard
+                              id={habit.id}
+                              habit={habit}
+                              isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
+                              onComplete={fetchData}
+                            />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
 
-                {habitsScheduledToday.length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-xl font-medium mb-2 text-foreground">
-                      Your first habit is the hardest—let's make it easy.
-                    </p>
-                    <p className="text-muted-foreground">
-                      Start with one small habit and watch your progress grow.
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
+                  {habitsScheduledToday.length === 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-center py-12"
+                    >
+                      <p className="text-xl font-medium mb-2 text-foreground">
+                        Your first habit is the hardest—let's make it easy.
+                      </p>
+                      <p className="text-muted-foreground">
+                        Start with one small habit and watch your progress grow.
+                      </p>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </>
         )}
 

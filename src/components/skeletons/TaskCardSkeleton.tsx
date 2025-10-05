@@ -1,9 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export const TaskCardSkeleton = () => {
+export const TaskCardSkeleton = ({ delay = 0 }: { delay?: number }) => {
   return (
-    <Card className="p-4 bg-card/60 backdrop-blur-medium border-border/40">
+    <Card 
+      className="p-4 bg-card/60 backdrop-blur-medium border-border/40 animate-fade-in" 
+      style={{ animationDelay: `${delay}ms` }}
+    >
       <div className="flex items-start gap-3">
         <Skeleton className="w-5 h-5 rounded-md shrink-0 mt-1" />
         
