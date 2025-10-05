@@ -87,7 +87,7 @@ export const HabitDetailDialog = ({
           .from('streaks')
           .select('current_count, best_count')
           .eq('habit_id', habit.id)
-          .single()
+          .maybeSingle()
       ]);
 
       if (logsResult.data) setLogs(logsResult.data);
@@ -228,13 +228,14 @@ export const HabitDetailDialog = ({
           whileHover={{ scale: 1.02 }}
         >
           <Button
+            type="button"
             onClick={handleComplete}
             disabled={completing}
             className="w-full relative overflow-hidden"
             size="lg"
           >
             <motion.div
-              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
               initial={{ x: '-100%' }}
               whileHover={{ x: '100%' }}
               transition={{ duration: 0.6 }}

@@ -148,7 +148,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
 
   const fetchStreakData = async () => {
     const [streakResult, logsResult] = await Promise.all([
-      supabase.from("streaks").select("*").eq("habit_id", habit.id).single(),
+      supabase.from("streaks").select("*").eq("habit_id", habit.id).maybeSingle(),
       supabase
         .from("habit_logs")
         .select("completed_at")
@@ -562,6 +562,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
             whileHover={{ scale: 1.05 }}
           >
             <Button
+              type="button"
               onClick={handleComplete}
               disabled={isCompletedToday || loading}
               variant={isCompletedToday ? "secondary" : "default"}
@@ -569,7 +570,7 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
               className="relative overflow-hidden"
             >
               <motion.div
-                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
                 initial={{ x: '-100%' }}
                 whileHover={{ x: '100%' }}
                 transition={{ duration: 0.6 }}
