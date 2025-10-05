@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { CheckCircle2, Trophy, Users, User, LogOut, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { NotificationBell } from "@/components/NotificationBell";
 import {
   Sheet,
   SheetContent,
@@ -94,6 +95,11 @@ export const MobileNav = () => {
           <Users className="w-6 h-6" />
           <span className="text-xs font-medium">Friends</span>
         </button>
+
+        <div className="flex flex-col items-center gap-1 min-w-[60px]">
+          <NotificationBell />
+          <span className="text-xs font-medium text-muted-foreground">Alerts</span>
+        </div>
         
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>

@@ -146,6 +146,42 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          message: string
+          metadata: Json | null
+          read: boolean
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          message: string
+          metadata?: Json | null
+          read?: boolean
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          message?: string
+          metadata?: Json | null
+          read?: boolean
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -428,6 +464,12 @@ export type Database = {
     Enums: {
       friendship_status: "pending" | "accepted" | "rejected"
       habit_difficulty: "easy" | "medium" | "hard"
+      notification_type:
+        | "friend_request"
+        | "friend_accepted"
+        | "streak_milestone"
+        | "level_up"
+        | "friend_activity"
       privacy_level: "public" | "friends" | "private"
       task_priority: "low" | "medium" | "high" | "urgent"
     }
@@ -559,6 +601,13 @@ export const Constants = {
     Enums: {
       friendship_status: ["pending", "accepted", "rejected"],
       habit_difficulty: ["easy", "medium", "hard"],
+      notification_type: [
+        "friend_request",
+        "friend_accepted",
+        "streak_milestone",
+        "level_up",
+        "friend_activity",
+      ],
       privacy_level: ["public", "friends", "private"],
       task_priority: ["low", "medium", "high", "urgent"],
     },
