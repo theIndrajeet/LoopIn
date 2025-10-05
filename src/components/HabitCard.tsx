@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { motion, PanInfo } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { Check, Flame, Archive, MoreVertical, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { HabitDetailDialog } from "./HabitDetailDialog";
 import { subDays, startOfDay, isSameDay } from "date-fns";
-import { motion } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useSound } from "@/hooks/use-sound";
 import { CompletionConfetti } from "./CompletionConfetti";
 import { XPGainAnimation } from "./XPGainAnimation";
@@ -37,8 +38,10 @@ interface HabitCardProps {
 }
 
 export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: HabitCardProps) => {
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [dragX, setDragX] = useState(0);
   const [streak, setStreak] = useState<any>(null);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [archiving, setArchiving] = useState(false);
@@ -190,14 +193,24 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
         navigator.vibrate([50, 100, 50]);
       }
 
-      // Track analytics
-      await supabase.from("suggestion_events").insert({
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-        suggestion_type: "habit_action",
-        action: "habit_complete",
-        suggestion_id: habit.id,
-        metadata: { source: "tap", xp_awarded: xp }
-      });
+      // Insert social event
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('social_events').insert({
+          user_id: user.id,
+          type: 'habit_completed',
+          payload: { habit_title: habit.title }
+        });
+        
+        // Track analytics
+        await supabase.from("suggestion_events").insert({
+          user_id: user.id,
+          suggestion_type: "habit_action",
+          action: "habit_complete",
+          suggestion_id: habit.id,
+          metadata: { source: "tap", xp_awarded: xp }
+        });
+      }
 
       const { dismiss } = toast({
         title: "Marked done. Undo?",
@@ -222,9 +235,19 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
       // Check for streak milestones
       const newStreak = (streak?.current_count || 0) + 1;
       if ([7, 30, 100].includes(newStreak)) {
-        setTimeout(() => {
+        setTimeout(async () => {
           play('streak-milestone');
           setShowMilestone(true);
+          
+          // Insert milestone event
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            await supabase.from('social_events').insert({
+              user_id: user.id,
+              type: 'streak_milestone',
+              payload: { habit_title: habit.title, streak_count: newStreak }
+            });
+          }
         }, 1500);
       }
     } catch (error: any) {
@@ -343,10 +366,47 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
     return hasLog;
   });
 
-  return (
-    <>
+  const handleDragEnd = (event: any, info: PanInfo) => {
+    if (!isMobile) return;
+    
+    const threshold = 64;
+    if (info.offset.x > threshold && !isCompletedToday) {
+      // Swipe right to complete
+      handleComplete(event);
+      if ('vibrate' in navigator) navigator.vibrate([30, 50]);
+    } else if (info.offset.x < -threshold) {
+      // Swipe left to archive
+      if (streak?.current_count > 10) {
+        toast({
+          title: "High streak!",
+          description: "Use the menu to archive habits with streaks > 10",
+        });
+      } else {
+        handleArchive(event);
+      }
+    }
+    setDragX(0);
+  };
+
+  const cardContent = (
+    <div className="relative">
+      {isMobile && dragX !== 0 && (
+        <div className="absolute inset-0 flex items-center justify-between px-6 pointer-events-none">
+          {dragX > 24 && (
+            <div className={`transition-opacity ${dragX > 64 ? 'opacity-100' : 'opacity-50'}`}>
+              <Check className="w-6 h-6 text-success" />
+            </div>
+          )}
+          {dragX < -24 && (
+            <div className={`ml-auto transition-opacity ${dragX < -64 ? 'opacity-100' : 'opacity-50'}`}>
+              <Archive className="w-6 h-6 text-destructive" />
+            </div>
+          )}
+        </div>
+      )}
+      
       <Card
-        onClick={() => setDialogOpen(true)}
+        onClick={() => !isMobile && setDialogOpen(true)}
         className="p-4 sm:p-5 bg-card border border-border hover:border-primary transition-all duration-200 active:scale-[0.98] sm:hover:scale-[1.02] hover:shadow-glow-primary cursor-pointer touch-manipulation"
       >
         <div className="flex items-start justify-between mb-3">
@@ -441,6 +501,25 @@ export const HabitCard = ({ habit, isCompletedToday, onComplete, onArchive }: Ha
           </motion.div>
         </div>
       </Card>
+    </div>
+  );
+
+  return (
+    <>
+      {isMobile ? (
+        <motion.div
+          drag="x"
+          dragConstraints={{ left: 0, right: 0 }}
+          dragElastic={0.2}
+          onDrag={(_, info) => setDragX(info.offset.x)}
+          onDragEnd={handleDragEnd}
+          onClick={() => dragX === 0 && setDialogOpen(true)}
+        >
+          {cardContent}
+        </motion.div>
+      ) : (
+        cardContent
+      )}
 
       <HabitDetailDialog
         habit={habit}

@@ -176,6 +176,33 @@ export type Database = {
         }
         Relationships: []
       }
+      social_events: {
+        Row: {
+          created_at: string
+          id: string
+          payload: Json
+          privacy_visible: boolean | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          payload: Json
+          privacy_visible?: boolean | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          payload?: Json
+          privacy_visible?: boolean | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       streaks: {
         Row: {
           best_count: number | null
@@ -249,6 +276,7 @@ export type Database = {
       }
       user_preferences: {
         Row: {
+          celebrations_enabled: boolean | null
           created_at: string | null
           dismissed_progressive_prompts: string[] | null
           energy_level: string | null
@@ -261,11 +289,13 @@ export type Database = {
           preferred_styles: string[] | null
           primary_goals: string[] | null
           schedule_type: string | null
+          sounds_enabled: boolean | null
           updated_at: string | null
           user_id: string
           work_environment: string | null
         }
         Insert: {
+          celebrations_enabled?: boolean | null
           created_at?: string | null
           dismissed_progressive_prompts?: string[] | null
           energy_level?: string | null
@@ -278,11 +308,13 @@ export type Database = {
           preferred_styles?: string[] | null
           primary_goals?: string[] | null
           schedule_type?: string | null
+          sounds_enabled?: boolean | null
           updated_at?: string | null
           user_id: string
           work_environment?: string | null
         }
         Update: {
+          celebrations_enabled?: boolean | null
           created_at?: string | null
           dismissed_progressive_prompts?: string[] | null
           energy_level?: string | null
@@ -295,6 +327,7 @@ export type Database = {
           preferred_styles?: string[] | null
           primary_goals?: string[] | null
           schedule_type?: string | null
+          sounds_enabled?: boolean | null
           updated_at?: string | null
           user_id?: string
           work_environment?: string | null

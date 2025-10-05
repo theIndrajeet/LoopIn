@@ -6,8 +6,13 @@ import { Card } from "@/components/ui/card";
 import { CreateHabitDialog } from "@/components/CreateHabitDialog";
 import { HabitCard } from "@/components/HabitCard";
 import { FloatingSuggestionFAB } from "@/components/FloatingSuggestionFAB";
+import { TodayProgressRing } from "@/components/TodayProgressRing";
+import { DashboardBanner } from "@/components/DashboardBanner";
+import { CelebrationPortal } from "@/components/CelebrationPortal";
 import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Archive, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { celebrationEvents, CelebrationType, CelebrationDetail } from "@/lib/celebrationEvents";
+import { useEffect as useEffectForCelebrations, useState as useStateForCelebrations } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -22,6 +27,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"active" | "archived" | "trash">("active");
   const [showAllDoneBanner, setShowAllDoneBanner] = useState(false);
+  const [showFAB, setShowFAB] = useState(false);
+  const [celebrationData, setCelebrationData] = useStateForCelebrations<CelebrationDetail | null>(null);
 
   const completedToday = todaysLogs.length;
   const totalHabits = habits.length;
@@ -31,6 +38,16 @@ export default function Dashboard() {
     checkAuth();
     fetchData();
   }, [viewMode]);
+  
+  useEffectForCelebrations(() => {
+    const handleCelebration = (event: Event) => {
+      const customEvent = event as CustomEvent<CelebrationDetail>;
+      setCelebrationData(customEvent.detail);
+    };
+    
+    celebrationEvents.addEventListener('celebrate', handleCelebration);
+    return () => celebrationEvents.removeEventListener('celebrate', handleCelebration);
+  }, []);
 
   useEffect(() => {
     if (viewMode === "active" && habits.length > 0 && completedToday === totalHabits && totalHabits > 0) {
@@ -214,18 +231,8 @@ export default function Dashboard() {
             </div>
           </Card>
 
-          <Card className="p-4 sm:p-6 bg-card border-border hover:border-primary transition-colors">
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-success/20 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-success" />
-              </div>
-              <div>
-                <p className="text-3xl font-bold text-foreground">
-                  {completedToday}/{totalHabits}
-                </p>
-                <p className="text-sm text-muted-foreground">Completed Today</p>
-              </div>
-            </div>
+          <Card className="p-4 sm:p-6 bg-card border-border hover:border-primary transition-colors flex items-center justify-center">
+            <TodayProgressRing completed={completedToday} total={totalHabits} />
           </Card>
         </div>
 
@@ -256,6 +263,10 @@ export default function Dashboard() {
             <TabsTrigger value="trash">Trash</TabsTrigger>
           </TabsList>
         </Tabs>
+        
+        {viewMode === "active" && showAllDoneBanner && (
+          <DashboardBanner onOpenSuggestions={() => setShowFAB(true)} />
+        )}
 
         {viewMode === "active" && (
           <>
@@ -396,6 +407,13 @@ export default function Dashboard() {
       {viewMode === "active" && (
         <FloatingSuggestionFAB habitCount={habits.length} onHabitCreated={fetchData} />
       )}
+      
+      <CelebrationPortal
+        show={!!celebrationData}
+        type={celebrationData?.type || 'first_completion'}
+        meta={celebrationData?.meta}
+        onDismiss={() => setCelebrationData(null)}
+      />
     </div>
   );
 }
