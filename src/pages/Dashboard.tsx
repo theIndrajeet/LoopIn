@@ -28,9 +28,6 @@ import { QuickPicksSection } from "@/components/QuickPicksSection";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { motion, AnimatePresence } from "framer-motion";
-import { HabitCardSkeleton } from "@/components/skeletons/HabitCardSkeleton";
-import { TaskCardSkeleton } from "@/components/skeletons/TaskCardSkeleton";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -44,7 +41,6 @@ export default function Dashboard() {
   const [contentType, setContentType] = useState<"habits" | "tasks">("habits");
   const [viewMode, setViewMode] = useState<"active" | "archived" | "trash">("active");
   const [showAllDoneBanner, setShowAllDoneBanner] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   
   const [celebrationData, setCelebrationData] = useStateForCelebrations<CelebrationDetail | null>(null);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
@@ -111,7 +107,6 @@ export default function Dashboard() {
 
   const fetchData = async () => {
     try {
-      setIsTransitioning(true);
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -182,7 +177,6 @@ export default function Dashboard() {
       });
     } finally {
       setLoading(false);
-      setTimeout(() => setIsTransitioning(false), 300);
     }
   };
 
@@ -480,11 +474,11 @@ export default function Dashboard() {
                 <CreateHabitDialog onHabitCreated={fetchData} />
               </div>
             )}
-              </>
-            )}
+          </>
+        )}
 
             {viewMode === "archived" && (
-          <>
+              <>
             {isTransitioning ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {[...Array(3)].map((_, i) => (
@@ -556,90 +550,93 @@ export default function Dashboard() {
           )}
 
             {viewMode === "trash" && (
-          <>
-            {isTransitioning ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                {[...Array(3)].map((_, i) => (
-                  <HabitCardSkeleton key={i} />
-                ))}
-              </div>
-            ) : (
               <>
-                <motion.div 
-                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
-                  initial="hidden"
-                  animate="show"
-                  variants={{
-                    hidden: { opacity: 0 },
-                    show: {
-                      opacity: 1,
-                      transition: { staggerChildren: 0.05 }
-                    }
-                  }}
-                >
-                  {habits.map((habit) => {
-                    const daysLeft = 30 - Math.floor((Date.now() - new Date(habit.deleted_at).getTime()) / (1000 * 60 * 60 * 24));
-                    return (
-                      <motion.div
-                        key={habit.id}
-                        variants={{
-                          hidden: { opacity: 0, y: 20 },
-                          show: { opacity: 1, y: 0 }
-                        }}
-                      >
-                        <Card className="p-4 sm:p-5 bg-destructive/10 border border-destructive/20">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg mb-1 text-muted-foreground line-through">{habit.title}</h3>
-                        <p className="text-xs text-destructive">
-                          Deletes in {daysLeft} days
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={async () => {
-                          await supabase
-                            .from("habits")
-                            .update({ deleted_at: null, archived_at: new Date().toISOString() })
-                            .eq("id", habit.id);
-                          fetchData();
-                          toast({ title: "Restored to Archived", description: "Habit moved to archived. Activate it to start tracking again." });
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                      >
-                        Restore
-                      </Button>
-                      <Button
-                        onClick={async () => {
-                          if (confirm(`Permanently delete "${habit.title}"? This cannot be undone.`)) {
-                            await supabase.from("habits").delete().eq("id", habit.id);
-                            fetchData();
-                            toast({ title: "Permanently deleted", variant: "destructive" });
-                          }
-                        }}
-                        variant="destructive"
-                        size="sm"
-                        className="flex-1"
-                      >
-                        Delete Now
-                      </Button>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+                {isTransitioning ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    {[...Array(3)].map((_, i) => (
+                      <HabitCardSkeleton key={i} />
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <motion.div 
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
+                      initial="hidden"
+                      animate="show"
+                      variants={{
+                        hidden: { opacity: 0 },
+                        show: {
+                          opacity: 1,
+                          transition: { staggerChildren: 0.05 }
+                        }
+                      }}
+                    >
+                      {habits.map((habit) => {
+                        const daysLeft = 30 - Math.floor((Date.now() - new Date(habit.deleted_at).getTime()) / (1000 * 60 * 60 * 24));
+                        return (
+                          <motion.div
+                            key={habit.id}
+                            variants={{
+                              hidden: { opacity: 0, y: 20 },
+                              show: { opacity: 1, y: 0 }
+                            }}
+                          >
+                            <Card className="p-4 sm:p-5 bg-destructive/10 border border-destructive/20">
+                              <div className="flex items-start justify-between mb-3">
+                                <div className="flex-1">
+                                  <h3 className="font-semibold text-lg mb-1 text-muted-foreground line-through">{habit.title}</h3>
+                                  <p className="text-xs text-destructive">
+                                    Deletes in {daysLeft} days
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button
+                                  onClick={async () => {
+                                    await supabase
+                                      .from("habits")
+                                      .update({ deleted_at: null, archived_at: new Date().toISOString() })
+                                      .eq("id", habit.id);
+                                    fetchData();
+                                    toast({ title: "Restored to Archived", description: "Habit moved to archived. Activate it to start tracking again." });
+                                  }}
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1"
+                                >
+                                  Restore
+                                </Button>
+                                <Button
+                                  onClick={async () => {
+                                    if (confirm(`Permanently delete "${habit.title}"? This cannot be undone.`)) {
+                                      await supabase.from("habits").delete().eq("id", habit.id);
+                                      fetchData();
+                                      toast({ title: "Permanently deleted", variant: "destructive" });
+                                    }
+                                  }}
+                                  variant="destructive"
+                                  size="sm"
+                                  className="flex-1"
+                                >
+                                  Delete Now
+                                </Button>
+                              </div>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
+                    </motion.div>
 
-            {habits.length === 0 && (
-              <div className="text-center py-12">
-                <Trash2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="text-muted-foreground">Trash is empty.</p>
-              </motion.div>
+                    {habits.length === 0 && (
+                      <div className="text-center py-12">
+                        <Trash2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <p className="text-muted-foreground">Trash is empty.</p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
             )}
-            </>
-          )}
 
           </TabsContent>
 
