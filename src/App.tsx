@@ -14,25 +14,24 @@ import { InstallPrompt } from "@/components/InstallPrompt";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 const App = () => (
-  <TooltipProvider>
+  <BrowserRouter>
+    <TooltipProvider>
       <Toaster />
       <Sonner />
       <OfflineIndicator />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/onboarding" element={<Onboarding />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/leaderboard" element={<Leaderboard />} />
-          <Route path="/friends" element={<Friends />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <MobileNav />
-        <InstallPrompt />
-      </BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/friends" element={<Friends />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <MobileNav />
+      <InstallPrompt />
     </TooltipProvider>
-  
+  </BrowserRouter>
 );
 
 export default App;
