@@ -38,6 +38,17 @@ export default function Dashboard() {
     }
   }, [completedToday, totalHabits, habits.length, viewMode]);
 
+  useEffect(() => {
+    if (showAllDoneBanner) {
+      toast({
+        title: "All done today! 🎉",
+        description: "Add one for tomorrow?",
+        duration: 7000,
+      });
+      setShowAllDoneBanner(false);
+    }
+  }, [showAllDoneBanner]);
+
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -97,17 +108,6 @@ export default function Dashboard() {
       </div>
     );
   }
-
-  useEffect(() => {
-    if (showAllDoneBanner) {
-      toast({
-        title: "All done today! 🎉",
-        description: "Add one for tomorrow?",
-        duration: 7000,
-      });
-      setShowAllDoneBanner(false);
-    }
-  }, [showAllDoneBanner]);
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-8">
