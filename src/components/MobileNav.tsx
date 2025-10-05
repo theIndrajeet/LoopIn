@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { CheckCircle2, Trophy, Users, User, LogOut, Zap } from "lucide-react";
+import { CheckCircle2, Trophy, Users, User, LogOut, Zap, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -65,10 +65,10 @@ export const MobileNav = () => {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-elevated border-t border-border md:hidden z-50 safe-area-inset-bottom">
-      <div className="flex justify-around items-center h-16 px-4">
+      <div className="flex justify-around items-center h-16 px-2">
         <button
           onClick={() => navigate("/dashboard")}
-          className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
+          className={`flex flex-col items-center gap-1 min-w-[52px] transition-colors ${
             isActive("/dashboard") ? "text-primary" : "text-muted-foreground"
           }`}
         >
@@ -77,8 +77,18 @@ export const MobileNav = () => {
         </button>
         
         <button
+          onClick={() => navigate("/ai-assistant")}
+          className={`flex flex-col items-center gap-1 min-w-[52px] transition-colors ${
+            isActive("/ai-assistant") ? "text-primary" : "text-muted-foreground"
+          }`}
+        >
+          <Sparkles className="w-6 h-6" />
+          <span className="text-xs font-medium">AI</span>
+        </button>
+        
+        <button
           onClick={() => navigate("/leaderboard")}
-          className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
+          className={`flex flex-col items-center gap-1 min-w-[52px] transition-colors ${
             isActive("/leaderboard") ? "text-primary" : "text-muted-foreground"
           }`}
         >
@@ -88,7 +98,7 @@ export const MobileNav = () => {
         
         <button
           onClick={() => navigate("/friends")}
-          className={`flex flex-col items-center gap-1 min-w-[60px] transition-colors ${
+          className={`flex flex-col items-center gap-1 min-w-[52px] transition-colors ${
             isActive("/friends") ? "text-primary" : "text-muted-foreground"
           }`}
         >
@@ -96,7 +106,7 @@ export const MobileNav = () => {
           <span className="text-xs font-medium">Friends</span>
         </button>
 
-        <div className="flex flex-col items-center gap-1 min-w-[60px]">
+        <div className="flex flex-col items-center gap-1 min-w-[52px]">
           <NotificationBell />
           <span className="text-xs font-medium text-muted-foreground">Alerts</span>
         </div>
@@ -104,7 +114,7 @@ export const MobileNav = () => {
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
             <button
-              className="flex flex-col items-center gap-1 min-w-[60px] transition-colors text-muted-foreground"
+              className="flex flex-col items-center gap-1 min-w-[52px] transition-colors text-muted-foreground"
             >
               <User className="w-6 h-6" />
               <span className="text-xs font-medium">Profile</span>
