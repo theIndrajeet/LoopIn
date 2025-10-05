@@ -13,6 +13,7 @@ import NotFound from "./pages/NotFound";
 import { MobileNav } from "@/components/MobileNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { PWAUpdatePrompt } from "@/components/PWAUpdatePrompt";
 
 const App = () => (
   <BrowserRouter>
@@ -20,6 +21,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <OfflineIndicator />
+      <PWAUpdatePrompt />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
