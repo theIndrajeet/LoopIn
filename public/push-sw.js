@@ -1,8 +1,8 @@
-// Custom service worker handlers for push notifications
+// Push notification service worker handlers
+// This file contains custom push notification logic
 
-// Push event - display notification
 self.addEventListener('push', (event) => {
-  console.log('Service Worker: Push event received');
+  console.log('Push event received:', event);
 
   let notificationData = {
     title: 'Loop Level',
@@ -26,29 +26,24 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const promiseChain = self.registration.showNotification(
-    notificationData.title,
-    {
+  event.waitUntil(
+    self.registration.showNotification(notificationData.title, {
       body: notificationData.body,
       icon: notificationData.icon,
       badge: notificationData.badge,
       tag: notificationData.tag,
       requireInteraction: notificationData.requireInteraction,
       data: notificationData.data || {},
-    }
+    })
   );
-
-  event.waitUntil(promiseChain);
 });
 
-// Notification click event - open app to relevant page
 self.addEventListener('notificationclick', (event) => {
-  console.log('Service Worker: Notification clicked');
+  console.log('Notification clicked:', event.notification);
   event.notification.close();
 
   let urlToOpen = '/dashboard';
 
-  // Determine URL based on notification type
   if (event.notification.data) {
     const { type, action_url } = event.notification.data;
 
@@ -56,23 +51,19 @@ self.addEventListener('notificationclick', (event) => {
       urlToOpen = action_url;
     } else if (type === 'friend_request' || type === 'friend_accepted') {
       urlToOpen = '/friends';
-    } else if (type === 'habit_reminder') {
-      urlToOpen = '/dashboard';
-    } else if (type === 'streak_warning') {
+    } else if (type === 'habit_reminder' || type === 'streak_warning') {
       urlToOpen = '/dashboard';
     }
   }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if app is already open
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           return client.focus().then(() => client.navigate(urlToOpen));
         }
       }
 
-      // If app is not open, open new window
       if (clients.openWindow) {
         return clients.openWindow(urlToOpen);
       }

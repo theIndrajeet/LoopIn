@@ -5,8 +5,8 @@ import { Bell, BellOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-// VAPID public key will be set via environment variable or generated
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || "BNXxKh-VKNJjKLz8jNQVNQtJxUC0_3bF1KmTjqGtNdMxVwLW5c7gE8HxJZqJqN_kFE_KzW9jKQVNQTjqGtNdMxVw";
+// Use the VAPID public key from your environment or the one provided
+const VAPID_PUBLIC_KEY = "BGljcW_WLU3ty4hHUbYWi-75Nz-BjBOgGSuZ5GbdkMxKTtHaSQWl1bmoiJCajTeySedPmy0hhet160Zc9Dnzmxo";
 
 export const PushNotificationManager = () => {
   const [permission, setPermission] = useState<NotificationPermission>("default");
