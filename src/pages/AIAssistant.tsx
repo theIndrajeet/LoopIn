@@ -55,37 +55,89 @@ export default function AIAssistant() {
         { role: "user", content: input },
       ];
 
+      console.log("[AI Chat] Sending request:", { messageCount: newHistory.length });
+
       const { data, error } = await supabase.functions.invoke("ai-chat-assistant", {
         body: { messages: newHistory },
       });
 
-      if (error) throw error;
+      // Handle specific error types
+      if (error) {
+        console.error("[AI Chat] Edge function error:", error);
+        if (error.message?.includes("429") || error.message?.includes("rate limit")) {
+          toast.error("Too many requests. Please wait a moment and try again.");
+        } else if (error.message?.includes("402") || error.message?.includes("payment")) {
+          toast.error("AI service unavailable. Please try again later.");
+        } else {
+          toast.error(error.message || "Failed to send message");
+        }
+        return;
+      }
+
+      // Validate response data
+      if (!data) {
+        console.error("[AI Chat] No data in response");
+        toast.error("Invalid response from AI. Please try again.");
+        return;
+      }
+
+      console.log("[AI Chat] Response received:", { hasMessage: !!data.message, hasToolCalls: !!data.toolCalls });
+
+      // Ensure message exists
+      const messageContent = data.message || "Sorry, I couldn't generate a response.";
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: "assistant",
-        content: data.message,
+        content: messageContent,
         timestamp: new Date(),
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
       setConversationHistory([
         ...newHistory,
-        { role: "assistant", content: data.message },
+        { role: "assistant", content: messageContent },
       ]);
 
-      // Handle tool calls for task/habit creation
-      if (data.toolCalls && data.toolCalls.length > 0) {
-        const newPendingItems = data.toolCalls.map((call: any) => ({
-          id: crypto.randomUUID(),
-          type: call.function.name === "create_task" ? "task" : "habit",
-          data: JSON.parse(call.function.arguments),
-        }));
-        setPendingItems((prev) => [...prev, ...newPendingItems]);
+      // Handle tool calls for task/habit creation with safe parsing
+      if (data.toolCalls && Array.isArray(data.toolCalls) && data.toolCalls.length > 0) {
+        try {
+          const newPendingItems = data.toolCalls
+            .map((call: any) => {
+              try {
+                // Handle arguments that might already be parsed or need parsing
+                const parsedArgs = typeof call.function.arguments === "string"
+                  ? JSON.parse(call.function.arguments)
+                  : call.function.arguments;
+
+                if (!parsedArgs || typeof parsedArgs !== "object") {
+                  console.error("[AI Chat] Invalid tool call arguments:", call);
+                  return null;
+                }
+
+                return {
+                  id: crypto.randomUUID(),
+                  type: call.function.name === "create_task" ? "task" : "habit",
+                  data: parsedArgs,
+                };
+              } catch (parseError) {
+                console.error("[AI Chat] Failed to parse tool call:", call, parseError);
+                return null;
+              }
+            })
+            .filter(Boolean); // Remove any null items from failed parsing
+
+          if (newPendingItems.length > 0) {
+            setPendingItems((prev) => [...prev, ...newPendingItems]);
+          }
+        } catch (toolError) {
+          console.error("[AI Chat] Error processing tool calls:", toolError);
+          toast.error("Failed to process AI suggestions");
+        }
       }
     } catch (error: any) {
-      console.error("AI chat error:", error);
-      toast.error(error.message || "Failed to send message");
+      console.error("[AI Chat] Unexpected error:", error);
+      toast.error(error.message || "An unexpected error occurred. Please try again.");
     } finally {
       setIsLoading(false);
     }
