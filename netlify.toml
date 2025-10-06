@@ -43,7 +43,3 @@
 # Functions configuration (for future use)
 [functions]
   directory = "netlify/functions"
-
-# Edge functions configuration (for future use)
-[edge_functions]
-  directory = "netlify/edge-functions"
