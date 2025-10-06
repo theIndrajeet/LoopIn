@@ -16,6 +16,9 @@ export default defineConfig(({ mode }) => ({
     VitePWA({
       registerType: "prompt",
       includeAssets: ["icon-192.png", "icon-512.png"],
+      strategies: "injectManifest",
+      srcDir: "public",
+      filename: "sw.js",
       manifest: {
         name: "Loop Level - Habit Tracker",
         short_name: "Loop Level",
@@ -40,21 +43,12 @@ export default defineConfig(({ mode }) => ({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg,woff2}"],
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/hvgzchzobsrnhfvcwpne\.supabase\.co\/.*/i,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "supabase-cache",
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 5 * 60,
-              },
-            },
-          },
-        ],
+      },
+      devOptions: {
+        enabled: true,
+        type: "module",
       },
     }),
   ].filter(Boolean),

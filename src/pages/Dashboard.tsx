@@ -31,6 +31,7 @@ import { QuickPicksSection } from "@/components/QuickPicksSection";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { PushNotificationManager } from "@/components/PushNotificationManager";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -498,35 +499,41 @@ export default function Dashboard() {
 
             {/* Habit-specific stats */}
             {viewMode === "active" && (
-              <div className="grid grid-cols-4 gap-2 sm:grid-cols-3 sm:gap-4 mb-6 sm:mb-8 mt-8">
-                <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
-                  <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-                    <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
-                      <Zap className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
+              <>
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-3 sm:gap-4 mb-4 sm:mb-6 mt-8">
+                  <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                        <Zap className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
+                      </div>
+                      <div className="text-center sm:text-left">
+                        <p className="text-xl sm:text-3xl font-bold text-foreground">{profile?.total_xp || 0}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Total XP</p>
+                      </div>
                     </div>
-                    <div className="text-center sm:text-left">
-                      <p className="text-xl sm:text-3xl font-bold text-foreground">{profile?.total_xp || 0}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Total XP</p>
-                    </div>
-                  </div>
-                </Card>
+                  </Card>
 
-                <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
-                  <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-                    <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-gold/20 flex items-center justify-center shrink-0">
-                      <Flame className="w-4 h-4 sm:w-6 sm:h-6 text-gold" />
+                  <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-gold/20 flex items-center justify-center shrink-0">
+                        <Flame className="w-4 h-4 sm:w-6 sm:h-6 text-gold" />
+                      </div>
+                      <div className="text-center sm:text-left">
+                        <p className="text-xl sm:text-3xl font-bold text-foreground">{totalStreaks}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Active Streaks</p>
+                      </div>
                     </div>
-                    <div className="text-center sm:text-left">
-                      <p className="text-xl sm:text-3xl font-bold text-foreground">{totalStreaks}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground">Active Streaks</p>
-                    </div>
-                  </div>
-                </Card>
+                  </Card>
 
-                <Card className="col-span-2 sm:col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors flex items-center justify-center">
-                  <TodayProgressRing completed={completedToday} total={totalHabits} />
-                </Card>
-              </div>
+                  <Card className="col-span-2 sm:col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors flex items-center justify-center">
+                    <TodayProgressRing completed={completedToday} total={totalHabits} />
+                  </Card>
+                </div>
+                
+                <div className="mb-6 sm:mb-8">
+                  <PushNotificationManager />
+                </div>
+              </>
             )}
 
 
