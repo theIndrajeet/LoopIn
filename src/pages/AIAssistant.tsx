@@ -215,19 +215,27 @@ export default function AIAssistant() {
       </header>
 
       {/* Chat Area */}
-      <ScrollArea className="h-[calc(100vh-180px)] p-4">
-        <div className="space-y-4 max-w-2xl mx-auto">
+      <ScrollArea className="h-[calc(100vh-180px)]">
+        <div className="px-4 py-6 max-w-3xl mx-auto">
           {messages.length === 0 ? (
-            <div className="text-center py-12 space-y-4">
-              <div className="text-4xl">✨</div>
-              <h2 className="text-xl font-semibold">Start a conversation</h2>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto">
-                Try saying things like:
+            <div className="text-center py-16 space-y-6 animate-fade-in">
+              <div className="text-5xl mb-2">✨</div>
+              <h2 className="text-2xl font-semibold bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+                Start a conversation
+              </h2>
+              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+                I can help you create tasks and habits. Try saying:
               </p>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <p>"Add buy groceries to my list"</p>
-                <p>"I want to start meditating daily"</p>
-                <p>"Remind me to call mom tomorrow"</p>
+              <div className="space-y-3 text-sm">
+                <div className="bg-card/50 border border-border/40 rounded-xl px-4 py-3 max-w-sm mx-auto hover:bg-card/70 transition-colors">
+                  "Add buy groceries to my list"
+                </div>
+                <div className="bg-card/50 border border-border/40 rounded-xl px-4 py-3 max-w-sm mx-auto hover:bg-card/70 transition-colors">
+                  "I want to start meditating daily"
+                </div>
+                <div className="bg-card/50 border border-border/40 rounded-xl px-4 py-3 max-w-sm mx-auto hover:bg-card/70 transition-colors">
+                  "Remind me to call mom tomorrow"
+                </div>
               </div>
             </div>
           ) : (
@@ -244,8 +252,10 @@ export default function AIAssistant() {
                 />
               ))}
               {isLoading && (
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                <div className="flex items-center gap-3 text-muted-foreground mb-6 animate-pulse">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  </div>
                   <span className="text-sm">AI is thinking...</span>
                 </div>
               )}
