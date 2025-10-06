@@ -1,6 +1,10 @@
 // Service Worker for Loop Level PWA
 // Handles push notifications, offline caching, and background sync
 
+// Workbox precache manifest injection point
+// eslint-disable-next-line no-undef
+const manifest = self.__WB_MANIFEST;
+
 const CACHE_NAME = 'loop-level-v1';
 const RUNTIME_CACHE = 'loop-level-runtime';
 
