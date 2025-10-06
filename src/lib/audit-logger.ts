@@ -77,18 +77,25 @@ export class AuditLogger {
   }
 
   async log(entry: Omit<AuditLogEntry, 'timestamp' | 'ip_address' | 'user_agent'>) {
-    const fullEntry: AuditLogEntry = {
-      ...entry,
-      ...this.getClientInfo(),
-      timestamp: new Date().toISOString()
-    };
+    try {
+      const fullEntry: AuditLogEntry = {
+        ...entry,
+        ...this.getClientInfo(),
+        timestamp: new Date().toISOString()
+      };
 
-    // Add to queue for batch processing
-    this.queue.push(fullEntry);
+      // Add to queue for batch processing
+      this.queue.push(fullEntry);
 
-    // For critical events, flush immediately
-    if (entry.severity === 'critical') {
-      await this.flushQueue();
+      // For critical events, flush immediately
+      if (entry.severity === 'critical') {
+        await this.flushQueue();
+      }
+    } catch (error) {
+      // Silently fail in production to prevent app crashes
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Audit logging error:', error);
+      }
     }
   }
 

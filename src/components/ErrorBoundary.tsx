@@ -228,7 +228,12 @@ export function withErrorBoundary<P extends object>(
 // Hook for error reporting within components
 export const useErrorHandler = () => {
   const reportError = (error: Error, context?: any) => {
-    logErrorToAudit(error, context);
+    try {
+      logErrorToAudit(error, context);
+    } catch (auditError) {
+      // Silently fail if audit logging fails
+      console.warn('Audit logging failed:', auditError);
+    }
     
     if (process.env.NODE_ENV === 'development') {
       console.error('Reported error:', error, context);
