@@ -195,9 +195,9 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-black pb-20">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800">
+      <header className="sticky top-0 z-10 bg-elevated/80 backdrop-blur-heavy border-b border-border/40 shadow-soft">
         <div className="flex items-center gap-3 p-4">
           <Button
             variant="ghost"
@@ -220,11 +220,11 @@ export default function AIAssistant() {
         <div className="px-6 py-4 max-w-2xl mx-auto">
           {messages.length === 0 ? (
             <div className="text-center py-20 space-y-4 animate-fade-in">
-              <div className="text-6xl mb-4">💬</div>
-              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300">
+              <div className="text-6xl mb-4">✨</div>
+              <h2 className="text-xl font-semibold bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-transparent">
                 Start a conversation
               </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 I can help you create tasks and habits
               </p>
             </div>
@@ -242,11 +242,11 @@ export default function AIAssistant() {
                 />
               ))}
               {isLoading && (
-                <div className="flex justify-start mb-2 animate-in slide-in-from-bottom-2 fade-in">
-                  <div className="bg-gray-100 dark:bg-gray-800 rounded-[20px] rounded-bl-[4px] px-4 py-3 flex gap-1.5">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                <div className="flex justify-start mb-3 animate-fade-in">
+                  <div className="bg-card/70 backdrop-blur-subtle border border-border/50 rounded-2xl rounded-bl-md px-4 py-3 flex gap-1.5 shadow-soft">
+                    <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 </div>
               )}
@@ -257,25 +257,25 @@ export default function AIAssistant() {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="fixed bottom-20 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 p-4">
+      <div className="fixed bottom-20 left-0 right-0 bg-elevated/80 backdrop-blur-heavy border-t border-border/40 p-4 shadow-elevated">
         <div className="max-w-2xl mx-auto relative">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            placeholder="iMessage"
+            placeholder="Type a message..."
             disabled={isLoading}
-            className="w-full rounded-[24px] border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-5 pr-12 text-[15px] focus-visible:ring-0 focus-visible:border-blue-500"
+            className="w-full rounded-full border-2 border-border bg-input/50 backdrop-blur-subtle py-3 px-5 pr-14 text-[15px] focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-primary transition-all"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!input.trim() || isLoading}
             size="icon"
             className={cn(
-              "absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full transition-all",
+              "absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full transition-all shadow-soft",
               input.trim() 
-                ? "bg-blue-500 hover:bg-blue-600 text-white" 
-                : "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
+                ? "bg-gradient-to-br from-primary to-primary/90 hover:shadow-glow-primary" 
+                : "bg-muted hover:bg-muted/80"
             )}
           >
             <Send className="w-4 h-4" />
