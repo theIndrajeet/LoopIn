@@ -67,12 +67,20 @@ export const ItemPreviewCard = ({ item, onAdd, onCancel }: ItemPreviewCardProps)
                   {item.data.priority}
                 </Badge>
               )}
-              {item.data.due_date && (
-                <Badge variant="outline">
-                  <Calendar className="w-3 h-3 mr-1" />
-                  {format(new Date(item.data.due_date), "MMM d, yyyy")}
-                </Badge>
-              )}
+              {item.data.due_date && (() => {
+                try {
+                  const date = new Date(item.data.due_date);
+                  if (isNaN(date.getTime())) return null;
+                  return (
+                    <Badge variant="outline">
+                      <Calendar className="w-3 h-3 mr-1" />
+                      {format(date, "MMM d, yyyy")}
+                    </Badge>
+                  );
+                } catch {
+                  return null;
+                }
+              })()}
             </>
           ) : (
             <>
