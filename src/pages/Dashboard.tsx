@@ -14,7 +14,7 @@ import { TaskCardSkeleton } from "@/components/skeletons/TaskCardSkeleton";
 import { TodayProgressRing } from "@/components/TodayProgressRing";
 import { DashboardBanner } from "@/components/DashboardBanner";
 import { CelebrationPortal } from "@/components/CelebrationPortal";
-import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Trash2, ListTodo, Clock } from "lucide-react";
+import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Trash2, ListTodo, Clock, Sparkles, Bell, User } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { celebrationEvents, CelebrationType, CelebrationDetail } from "@/lib/celebrationEvents";
 import { useEffect as useEffectForCelebrations, useState as useStateForCelebrations } from "react";
@@ -47,6 +47,7 @@ export default function Dashboard() {
   
   const [celebrationData, setCelebrationData] = useStateForCelebrations<CelebrationDetail | null>(null);
   const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   
   // Task-specific state
   const [tasks, setTasks] = useState<any[]>([]);
@@ -69,6 +70,7 @@ export default function Dashboard() {
   useEffect(() => {
     checkAuth();
     fetchData();
+    fetchUnreadCount();
   }, [viewMode, contentType]);
   
   useEffectForCelebrations(() => {
@@ -203,6 +205,28 @@ export default function Dashboard() {
     }
   };
 
+  const fetchUnreadCount = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return;
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', session.session.user.id)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error fetching unread count:', error);
+        return;
+      }
+
+      setUnreadCount(data?.length || 0);
+    } catch (error) {
+      console.error('Error in fetchUnreadCount:', error);
+    }
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/auth");
@@ -318,13 +342,34 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="hidden sm:flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Home
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/ai-assistant")}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Magic
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/leaderboard")}>
+              <Trophy className="w-4 h-4 mr-2" />
+              Ranks
+            </Button>
             <Button variant="outline" size="sm" onClick={() => navigate("/friends")}>
               <Users className="w-4 h-4 mr-2" />
               Friends
             </Button>
-            <Button variant="outline" size="sm" onClick={() => navigate("/leaderboard")}>
-              <Trophy className="w-4 h-4 mr-2" />
-              Leaderboard
+            <Button variant="outline" size="sm" className="relative" onClick={() => navigate("/dashboard")}>
+              <Bell className="w-4 h-4 mr-2" />
+              Alerts
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center bg-destructive text-destructive-foreground rounded-full text-[9px]">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+              <User className="w-4 h-4 mr-2" />
+              Profile
             </Button>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
               <LogOut className="w-4 h-4 mr-2" />
