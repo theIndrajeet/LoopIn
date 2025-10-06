@@ -1,0 +1,1144 @@
+import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import { AnimatePresence, motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { CreateHabitDialog } from "@/components/CreateHabitDialog";
+import { CreateTaskDialog } from "@/components/CreateTaskDialog";
+import { HabitCard } from "@/components/HabitCard";
+import { TaskDetailDialog } from "@/components/TaskDetailDialog";
+import { HabitCardSkeleton } from "@/components/skeletons/HabitCardSkeleton";
+import { TaskCardSkeleton } from "@/components/skeletons/TaskCardSkeleton";
+
+import { TodayProgressRing } from "@/components/TodayProgressRing";
+import { DashboardBanner } from "@/components/DashboardBanner";
+import { CelebrationPortal } from "@/components/CelebrationPortal";
+import { LogOut, Zap, Flame, CheckCircle2, Trophy, Users, Trash2, ListTodo, Clock, Sparkles, Bell, User, BarChart3 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { celebrationEvents, CelebrationType, CelebrationDetail } from "@/lib/celebrationEvents";
+import { useEffect as useEffectForCelebrations, useState as useStateForCelebrations } from "react";
+import { useUserTimezone } from "@/hooks/use-user-timezone";
+import { getStartOfTodayInTimezone, convertToUserTimezone } from "@/lib/timezone-utils";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableHabitCard } from "@/components/SortableHabitCard";
+import { SortableTaskCard } from "@/components/SortableTaskCard";
+import { isToday, isPast } from "date-fns";
+import { Lightbulb } from "lucide-react";
+import { QuickPicksSection } from "@/components/QuickPicksSection";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from "@/components/ui/sheet";
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription } from "@/components/ui/drawer";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { NotificationsList } from "@/components/NotificationsList";
+import { NotificationSettings } from "@/components/NotificationSettings";
+import { Badge } from "@/components/ui/badge";
+import { ProfileEditForm } from "@/components/ProfileEditForm";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
+import { useDashboardRealtime } from "@/hooks/use-dashboard-realtime";
+import { useOptimizedDashboardData } from "@/hooks/use-dashboard-realtime";
+import { usePerformance } from "@/hooks/use-performance";
+import { useSupabaseErrorHandler } from "@/hooks/use-error-handler";
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const { timezone } = useUserTimezone();
+  const isMobile = useIsMobile();
+  const [todaysLogs, setTodaysLogs] = useState<any[]>([]);
+  
+  // Performance monitoring
+  const { measureAsync } = usePerformance();
+  const { supabaseCall } = useSupabaseErrorHandler();
+  
+  // Get current user
+  const [user, setUser] = useState<any>(null);
+  
+  // Optimized data fetching with caching
+  const { data: dashboardData, loading: dataLoading, refreshAll } = useOptimizedDashboardData(user?.id || '');
+  
+  const loading = dataLoading;
+  
+  // Real-time updates
+  useDashboardRealtime({
+    userId: user?.id || '',
+    onDataUpdate: (data) => {
+      // This will be handled by the realtime hooks automatically
+      console.log('🔄 Dashboard data updated:', Object.keys(data));
+    },
+    enabled: !!user?.id
+  });
+  
+  const [contentType, setContentType] = useState<"habits" | "tasks">("habits");
+  const [viewMode, setViewMode] = useState<"active" | "trash" | "analytics">("active");
+  const [showAllDoneBanner, setShowAllDoneBanner] = useState(false);
+  
+  const [celebrationData, setCelebrationData] = useStateForCelebrations<CelebrationDetail | null>(null);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  
+  // Task-specific state
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [allTasks, setAllTasks] = useState<any[]>([]);
+  const [selectedTask, setSelectedTask] = useState<any | null>(null);
+  const [taskDetailOpen, setTaskDetailOpen] = useState(false);
+
+  // Get current day of week (0 = Sunday, 6 = Saturday) for filtering habits scheduled today
+  const today = new Date().getDay();
+  
+  // Filter habits scheduled for today
+  const habitsScheduledToday = dashboardData.habits.filter(h => 
+    h.schedule_days && Array.isArray(h.schedule_days) && h.schedule_days.includes(today)
+  );
+  
+  const completedToday = todaysLogs.length;
+  const totalHabits = habitsScheduledToday.length;
+  const totalStreaks = dashboardData.streaks.reduce((sum, s) => sum + s.current_count, 0);
+
+  useEffect(() => {
+    checkAuth();
+    fetchUnreadCount();
+  }, [viewMode, contentType]);
+
+  // Real-time subscriptions for live updates
+  useEffect(() => {
+    const setupRealtimeSubscriptions = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+    const channels = [];
+
+    // Real-time habits updates
+    const habitsChannel = supabase
+      .channel('dashboard-habits')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'habits',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          console.log('🔄 Habits updated - refreshing dashboard');
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    // Real-time habit logs updates
+    const logsChannel = supabase
+      .channel('dashboard-logs')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'habit_logs'
+        },
+        (payload) => {
+          console.log('🔄 Habit log updated - refreshing dashboard');
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    // Real-time tasks updates
+    const tasksChannel = supabase
+      .channel('dashboard-tasks')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasks',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          console.log('🔄 Tasks updated - refreshing dashboard');
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    // Real-time profile updates (XP changes)
+    const profileChannel = supabase
+      .channel('dashboard-profile')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('🔄 Profile updated - refreshing dashboard');
+          // Profile updates are handled by useOptimizedDashboardData
+        }
+      )
+      .subscribe();
+
+    // Real-time streaks updates
+    const streaksChannel = supabase
+      .channel('dashboard-streaks')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'streaks'
+        },
+        () => {
+          console.log('🔄 Streaks updated - refreshing dashboard');
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    // Real-time notifications updates
+    const notificationsChannel = supabase
+      .channel('dashboard-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          console.log('🔄 Notifications updated - refreshing count');
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    channels.push(habitsChannel, logsChannel, tasksChannel, profileChannel, streaksChannel, notificationsChannel);
+
+    return () => {
+      channels.forEach(channel => {
+        supabase.removeChannel(channel);
+      });
+    };
+  };
+
+  setupRealtimeSubscriptions();
+}, []);
+  
+  useEffectForCelebrations(() => {
+    const handleCelebration = (event: Event) => {
+      const customEvent = event as CustomEvent<CelebrationDetail>;
+      setCelebrationData(customEvent.detail);
+    };
+    
+    celebrationEvents.addEventListener('celebrate', handleCelebration);
+    return () => celebrationEvents.removeEventListener('celebrate', handleCelebration);
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === "active" && dashboardData.habits.length > 0 && completedToday === totalHabits && totalHabits > 0) {
+      const hasShownBanner = sessionStorage.getItem("all_done_banner_shown");
+      if (!hasShownBanner) {
+        setShowAllDoneBanner(true);
+        sessionStorage.setItem("all_done_banner_shown", "true");
+      }
+    }
+  }, [completedToday, totalHabits, dashboardData.habits.length, viewMode]);
+
+  useEffect(() => {
+    if (showAllDoneBanner) {
+      toast({
+        title: "All done today! 🎉",
+        description: "Add one for tomorrow?",
+        duration: 7000,
+      });
+      setShowAllDoneBanner(false);
+    }
+  }, [showAllDoneBanner]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const checkAuth = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      navigate("/auth");
+    } else {
+      setUser(user);
+    }
+  };
+
+  const fetchData = async () => {
+    setLoading(true);
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (contentType === "habits") {
+        let habitsQuery = supabase.from("habits").select("*").eq("user_id", user.id);
+
+        if (viewMode === "active") {
+          habitsQuery = habitsQuery
+            .eq("active", true)
+            .is("archived_at", null)
+            .is("deleted_at", null)
+            .order('order_index', { ascending: true, nullsFirst: false })
+            .order('created_at', { ascending: true });
+        } else if (viewMode === "trash") {
+          habitsQuery = habitsQuery.not("deleted_at", "is", null);
+        }
+
+        // Get start of today in user's timezone for accurate "today" filtering
+        const startOfToday = getStartOfTodayInTimezone(timezone);
+        const currentDayOfWeek = new Date().getDay();
+
+        const [habitsResult, logsResult, profileResult, streaksResult] = await Promise.all([
+          habitsQuery,
+          supabase
+            .from("habit_logs")
+            .select(`
+              habit_id,
+              habits!inner (
+                id,
+                active,
+                archived_at,
+                deleted_at,
+                schedule_days
+              )
+            `)
+            .gte("completed_at", startOfToday)
+            .eq("habits.active", true)
+            .is("habits.archived_at", null)
+            .is("habits.deleted_at", null)
+            .contains("habits.schedule_days", [currentDayOfWeek]),
+          supabase.from("profiles").select("*").eq("id", user.id).single(),
+          supabase.from("streaks").select("*"),
+        ]);
+
+        if (habitsResult.data) setHabits(habitsResult.data);
+        if (logsResult.data) setTodaysLogs(logsResult.data);
+        // Profile data is handled by useOptimizedDashboardData
+        if (streaksResult.data) setStreaks(streaksResult.data);
+      } else {
+        // Fetch tasks
+        let tasksQuery = supabase.from("tasks").select("*").eq("user_id", user.id);
+
+        if (viewMode === "active") {
+          tasksQuery = tasksQuery
+            .eq("completed", false)
+            .is("deleted_at", null)
+            .order('order_index', { ascending: true, nullsFirst: false })
+            .order('created_at', { ascending: true });
+        } else if (viewMode === "trash") {
+          tasksQuery = tasksQuery.not("deleted_at", "is", null);
+        }
+
+        const [tasksResult, allTasksResult, profileResult] = await Promise.all([
+          tasksQuery,
+          supabase.from("tasks").select("*").eq("user_id", user.id).is("deleted_at", null),
+          supabase.from("profiles").select("*").eq("id", user.id).single(),
+        ]);
+
+        if (tasksResult.data) setTasks(tasksResult.data);
+        if (allTasksResult.data) setAllTasks(allTasksResult.data);
+        // Profile data is handled by useOptimizedDashboardData
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error loading data",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchUnreadCount = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return;
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('id')
+        .eq('user_id', session.session.user.id)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error fetching unread count:', error);
+        return;
+      }
+
+      setUnreadCount(data?.length || 0);
+    } catch (error) {
+      console.error('Error in fetchUnreadCount:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session.session) return;
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', session.session.user.id)
+        .eq('read', false);
+
+      if (error) {
+        console.error('Error marking notifications as read:', error);
+        return;
+      }
+
+      await fetchUnreadCount();
+    } catch (error) {
+      console.error('Error in markAllAsRead:', error);
+    }
+  };
+
+  const fetchProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (error) throw error;
+      // Profile data is handled by useOptimizedDashboardData
+    } catch (error) {
+      console.error("Error fetching profile:", error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) return;
+
+    if (contentType === "habits") {
+      const oldIndex = dashboardData.habits.findIndex((h) => h.id === active.id);
+      const newIndex = dashboardData.habits.findIndex((h) => h.id === over.id);
+
+      const newHabits = arrayMove(dashboardData.habits, oldIndex, newIndex);
+      // Note: This would need to be handled by the data fetching hook
+      // For now, we'll just log the reorder
+      console.log('Habits reordered:', newHabits);
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const updates = newHabits.map((habit, index) => ({
+          id: habit.id,
+          order_index: index,
+        }));
+
+        for (const update of updates) {
+          await supabase
+            .from('habits')
+            .update({ order_index: update.order_index })
+            .eq('id', update.id);
+        }
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to save habit order",
+          variant: "destructive",
+        });
+      }
+    } else {
+      const oldIndex = dashboardData.tasks.findIndex((t) => t.id === active.id);
+      const newIndex = dashboardData.tasks.findIndex((t) => t.id === over.id);
+
+      const newTasks = arrayMove(dashboardData.tasks, oldIndex, newIndex);
+      // Note: This would need to be handled by the data fetching hook
+      // For now, we'll just log the reorder
+      console.log('Tasks reordered:', newTasks);
+
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const updates = newTasks.map((task, index) => ({
+          id: task.id,
+          order_index: index,
+        }));
+
+        for (const update of updates) {
+          await supabase
+            .from('tasks')
+            .update({ order_index: update.order_index })
+            .eq('id', update.id);
+        }
+      } catch (error: any) {
+        toast({
+          title: "Error",
+          description: "Failed to save task order",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleOpenSuggestions = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    // Track impression
+    await supabase.from("suggestion_events").insert({
+      user_id: user.id,
+      suggestion_type: "quick_pick",
+      action: "suggest_impression",
+      suggestion_id: "header_button",
+      metadata: { placement: "header" }
+    });
+
+    setSuggestionsOpen(true);
+  };
+
+  // Task stats calculations
+  const tasksDueToday = allTasks.filter(t => t.due_date && isToday(new Date(t.due_date)) && !t.completed).length;
+  const completedTasks = allTasks.filter(t => t.completed).length;
+  const totalTasks = allTasks.filter(t => !t.completed).length;
+  const overdueTasks = allTasks.filter(t => t.due_date && isPast(new Date(t.due_date)) && !isToday(new Date(t.due_date)) && !t.completed).length;
+  const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / (completedTasks + totalTasks)) * 100) : 0;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background pb-20 md:pb-8">
+      <div className="container max-w-6xl mx-auto px-4 py-4 sm:py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 text-foreground">
+              Welcome back, {dashboardData.profile?.display_name || "there"}! 👋
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Keep building those streaks!
+            </p>
+          </div>
+          <div className="hidden sm:flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => navigate("/dashboard")}>
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Home
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/ai-assistant")}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Magic
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/leaderboard")}>
+              <Trophy className="w-4 h-4 mr-2" />
+              Ranks
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => navigate("/friends")}>
+              <Users className="w-4 h-4 mr-2" />
+              Friends
+            </Button>
+            <Button variant="outline" size="sm" className="relative" onClick={() => {
+              setNotificationsOpen(true);
+              markAllAsRead();
+            }}>
+              <Bell className="w-4 h-4 mr-2" />
+              Alerts
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center bg-destructive text-destructive-foreground rounded-full text-[9px]">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </span>
+              )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setProfileOpen(true)}>
+              <User className="w-4 h-4 mr-2" />
+              Profile
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleSignOut}>
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+
+        {/* Content Type Tabs (Habits/Tasks) */}
+        <Tabs value={contentType} onValueChange={(v) => setContentType(v as typeof contentType)} className="mb-6">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="habits" className="flex-1 sm:flex-none">
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+              Habits
+            </TabsTrigger>
+            <TabsTrigger value="tasks" className="flex-1 sm:flex-none">
+              <ListTodo className="w-4 h-4 mr-2" />
+              Tasks
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="habits" className="mt-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground">Your Habits</h2>
+                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="hidden sm:block">
+                  <TabsList>
+                    <TabsTrigger value="active">Active</TabsTrigger>
+                    <TabsTrigger value="analytics">
+                      <BarChart3 className="w-4 h-4 mr-1" />
+                      Analytics
+                    </TabsTrigger>
+                    <TabsTrigger value="trash">
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Trash
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              {viewMode === "active" && (
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleOpenSuggestions}
+                    className="gap-2"
+                  >
+                    <Lightbulb className="w-4 h-4" />
+                    <span className="hidden sm:inline">Try this</span>
+                  </Button>
+                  <CreateHabitDialog onHabitCreated={fetchData} />
+                </div>
+              )}
+            </div>
+
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="sm:hidden mb-4">
+              <TabsList className="w-full grid grid-cols-3">
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="trash">Trash</TabsTrigger>
+              </TabsList>
+            </Tabs>
+        
+            {viewMode === "active" && showAllDoneBanner && (
+              <DashboardBanner onOpenSuggestions={() => setSuggestionsOpen(true)} />
+            )}
+
+            {viewMode === "active" && (
+          <>
+            <AnimatePresence mode="wait">
+              {loading ? (
+                <motion.div 
+                  key="skeleton"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4"
+                >
+                  {[1, 2, 3].map((i) => (
+                    <HabitCardSkeleton key={i} delay={i * 100} />
+                  ))}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="content"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={habitsScheduledToday.map(h => h.id)} strategy={verticalListSortingStrategy}>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                        {habitsScheduledToday.map((habit, idx) => (
+                          <motion.div
+                            key={habit.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.05, duration: 0.3 }}
+                          >
+                            <SortableHabitCard
+                              id={habit.id}
+                              habit={habit}
+                              isCompletedToday={todaysLogs.some((log) => log.habit_id === habit.id)}
+                              onComplete={fetchData}
+                            />
+                          </motion.div>
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+
+                  {habitsScheduledToday.length === 0 && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-center py-12"
+                    >
+                      <p className="text-xl font-medium mb-2 text-foreground">
+                        Your first habit is the hardest—let's make it easy.
+                      </p>
+                      <p className="text-muted-foreground">
+                        Start with one small habit and watch your progress grow.
+                      </p>
+                    </motion.div>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </>
+        )}
+
+            {/* Habit-specific stats */}
+            {viewMode === "active" && (
+              <>
+                <div className="grid grid-cols-4 gap-2 sm:grid-cols-3 sm:gap-4 mb-4 sm:mb-6 mt-8">
+                  <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                        <Zap className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
+                      </div>
+                      <div className="text-center sm:text-left">
+                        <p className="text-xl sm:text-3xl font-bold text-foreground">{dashboardData.profile?.total_xp || 0}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Total XP</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors">
+                    <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
+                      <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl bg-gold/20 flex items-center justify-center shrink-0">
+                        <Flame className="w-4 h-4 sm:w-6 sm:h-6 text-gold" />
+                      </div>
+                      <div className="text-center sm:text-left">
+                        <p className="text-xl sm:text-3xl font-bold text-foreground">{totalStreaks}</p>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Active Streaks</p>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card className="col-span-2 sm:col-span-1 p-3 sm:p-6 bg-card border-border hover:border-primary transition-colors flex items-center justify-center">
+                    <TodayProgressRing completed={completedToday} total={totalHabits} />
+                  </Card>
+                </div>
+              </>
+            )}
+
+            {viewMode === "analytics" && (
+              <AnalyticsDashboard />
+            )}
+
+            {viewMode === "trash" && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 animate-fade-in">
+                  {dashboardData.habits.map((habit, idx) => {
+                    const daysLeft = 30 - Math.floor((Date.now() - new Date(habit.deleted_at).getTime()) / (1000 * 60 * 60 * 24));
+                    return (
+                      <Card key={habit.id} className="p-4 sm:p-5 bg-destructive/10 border border-destructive/20" style={{ animationDelay: `${idx * 50}ms` }}>
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-1 text-muted-foreground line-through">{habit.title}</h3>
+                            <p className="text-xs text-destructive">
+                              Deletes in {daysLeft} days
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={async () => {
+                              await supabase
+                                .from("habits")
+                                .update({ deleted_at: null, active: true, archived_at: null })
+                                .eq("id", habit.id);
+                              fetchData();
+                              toast({ title: "Habit restored to active" });
+                            }}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Restore
+                          </Button>
+                          <Button
+                            onClick={async () => {
+                              if (confirm(`Permanently delete "${habit.title}"? This cannot be undone.`)) {
+                                await supabase.from("habits").delete().eq("id", habit.id);
+                                fetchData();
+                                toast({ title: "Permanently deleted", variant: "destructive" });
+                              }
+                            }}
+                            variant="destructive"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Delete Now
+                          </Button>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
+
+                {dashboardData.habits.length === 0 && (
+                  <div className="text-center py-12">
+                    <Trash2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">Trash is empty.</p>
+                  </div>
+                )}
+              </>
+            )}
+
+          </TabsContent>
+
+          <TabsContent value="tasks" className="mt-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 sm:mb-6">
+              <div className="flex items-center gap-4 w-full sm:w-auto">
+                <h2 className="text-xl sm:text-2xl font-bold text-foreground">Your Tasks</h2>
+                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="hidden sm:block">
+                  <TabsList>
+                    <TabsTrigger value="active">Active</TabsTrigger>
+                    <TabsTrigger value="trash">
+                      <Trash2 className="w-4 h-4 mr-1" />
+                      Trash
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+              {viewMode === "active" && <CreateTaskDialog onTaskCreated={fetchData} />}
+            </div>
+
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)} className="sm:hidden mb-4">
+              <TabsList className="w-full grid grid-cols-3">
+                <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="trash">Trash</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+
+            {viewMode === "active" && (
+              <>
+                {loading ? (
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i}><TaskCardSkeleton /></div>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                      <SortableContext items={dashboardData.tasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                        <div className="grid grid-cols-1 gap-3 sm:gap-4 animate-fade-in">
+                          {dashboardData.tasks.map((task, idx) => (
+                            <SortableTaskCard
+                              key={task.id}
+                              id={task.id}
+                              task={task}
+                              onComplete={async () => {
+                                await supabase.from("tasks").update({ 
+                                  completed: true, 
+                                  completed_at: new Date().toISOString() 
+                                }).eq("id", task.id);
+                                fetchData();
+                                toast({ title: "Task completed!" });
+                              }}
+                              onDelete={async () => {
+                                await supabase.from("tasks").update({ 
+                                  deleted_at: new Date().toISOString() 
+                                }).eq("id", task.id);
+                                fetchData();
+                                toast({ title: "Task moved to trash" });
+                              }}
+                              onClick={() => {
+                                setSelectedTask(task);
+                                setTaskDetailOpen(true);
+                              }}
+                              style={{ animationDelay: `${idx * 50}ms` }}
+                            />
+                          ))}
+                        </div>
+                      </SortableContext>
+                    </DndContext>
+
+                    {dashboardData.tasks.length === 0 && (
+                      <div className="text-center py-12">
+                        <ListTodo className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <p className="text-xl font-medium mb-2 text-foreground">
+                          No tasks yet!
+                        </p>
+                        <p className="text-muted-foreground">
+                          Create your first task to get organized.
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+
+            {/* Task-specific stats */}
+            {viewMode === "active" && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6 sm:mb-8 mt-8">
+                <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{tasksDueToday}</p>
+                      <p className="text-xs text-muted-foreground">Due Today</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{taskCompletionRate}%</p>
+                      <p className="text-xs text-muted-foreground">Completion</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex items-center gap-2">
+                    <ListTodo className="w-4 h-4 text-blue-500" />
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{totalTasks}</p>
+                      <p className="text-xs text-muted-foreground">Active</p>
+                    </div>
+                  </div>
+                </Card>
+                <Card className="p-4 bg-card border-border hover:border-primary transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                    <div>
+                      <p className="text-2xl font-bold text-foreground">{overdueTasks}</p>
+                      <p className="text-xs text-muted-foreground">Overdue</p>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+
+            {viewMode === "trash" && (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:gap-4 animate-fade-in">
+                  {dashboardData.tasks.map((task, idx) => (
+                    <Card key={task.id} className="p-4 bg-destructive/10 border border-destructive/20" style={{ animationDelay: `${idx * 50}ms` }}>
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-lg mb-1 text-muted-foreground line-through">{task.title}</h3>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={async () => {
+                            await supabase.from("tasks").update({ deleted_at: null, completed: false }).eq("id", task.id);
+                            fetchData();
+                            toast({ title: "Task restored to active" });
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          Restore
+                        </Button>
+                        <Button
+                          onClick={async () => {
+                            if (confirm(`Permanently delete "${task.title}"? This cannot be undone.`)) {
+                              await supabase.from("tasks").delete().eq("id", task.id);
+                              fetchData();
+                              toast({ title: "Permanently deleted", variant: "destructive" });
+                            }
+                          }}
+                          variant="destructive"
+                          size="sm"
+                          className="flex-1"
+                        >
+                          Delete Now
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+
+                {dashboardData.tasks.length === 0 && (
+                  <div className="text-center py-12">
+                    <Trash2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                    <p className="text-muted-foreground">Trash is empty.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      <TaskDetailDialog
+        task={selectedTask}
+        open={taskDetailOpen}
+        onOpenChange={setTaskDetailOpen}
+        onTaskUpdated={fetchData}
+      />
+      
+      <CelebrationPortal
+        show={!!celebrationData}
+        type={celebrationData?.type || 'first_completion'}
+        meta={celebrationData?.meta}
+        onDismiss={() => setCelebrationData(null)}
+      />
+
+      {/* Suggestions Sheet/Drawer */}
+      {isMobile ? (
+        <Drawer open={suggestionsOpen} onOpenChange={setSuggestionsOpen}>
+          <DrawerContent>
+            <DrawerHeader>
+              <DrawerTitle className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-primary" />
+                Quick Picks for You
+              </DrawerTitle>
+              <DrawerDescription>
+                AI-powered habit suggestions tailored to your goals
+              </DrawerDescription>
+            </DrawerHeader>
+            <div className="px-4 pb-6 max-h-[70vh] overflow-y-auto">
+              <QuickPicksSection 
+                onHabitCreated={() => {
+                  fetchData();
+                  setSuggestionsOpen(false);
+                }} 
+              />
+            </div>
+          </DrawerContent>
+        </Drawer>
+      ) : (
+        <Sheet open={suggestionsOpen} onOpenChange={setSuggestionsOpen}>
+          <SheetContent className="sm:max-w-md overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <Lightbulb className="w-5 h-5 text-primary" />
+                Quick Picks for You
+              </SheetTitle>
+              <SheetDescription>
+                AI-powered habit suggestions tailored to your goals
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-6">
+              <QuickPicksSection 
+                onHabitCreated={() => {
+                  fetchData();
+                  setSuggestionsOpen(false);
+                }} 
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Notifications Sheet */}
+      <Sheet open={notificationsOpen} onOpenChange={setNotificationsOpen}>
+        <SheetContent className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Alerts</SheetTitle>
+          </SheetHeader>
+          <Tabs defaultValue="notifications" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="notifications" className="relative">
+                Notifications
+                {unreadCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="ml-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                  >
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+            <TabsContent value="notifications" className="mt-4">
+              <NotificationsList onNotificationRead={fetchUnreadCount} />
+            </TabsContent>
+            <TabsContent value="settings" className="mt-4">
+              <NotificationSettings />
+            </TabsContent>
+          </Tabs>
+        </SheetContent>
+      </Sheet>
+
+      {/* Profile Sheet */}
+      <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
+        <SheetContent className="overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Profile</SheetTitle>
+          </SheetHeader>
+          
+          <div className="py-6 space-y-6">
+            {/* User Info Section */}
+            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
+              <Avatar className="w-16 h-16">
+                <AvatarImage src={dashboardData.profile?.avatar_url || undefined} alt={dashboardData.profile?.display_name} />
+                <AvatarFallback className="text-lg">
+                  {dashboardData.profile?.display_name?.charAt(0)?.toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">{dashboardData.profile?.display_name || "User"}</h3>
+                <div className="flex items-center gap-2 mt-1">
+                  <Zap className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-muted-foreground">
+                    {dashboardData.profile?.total_xp || 0} XP
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Edit Profile Section */}
+            <Accordion type="single" collapsible className="w-full">
+              <AccordionItem value="edit-profile" className="border-none">
+                <AccordionTrigger className="text-base font-semibold">
+                  Edit Profile
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ProfileEditForm profile={dashboardData.profile} onUpdate={fetchProfile} />
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+
+            <Separator />
+
+            {/* Sign Out Button */}
+            <Button
+              variant="outline"
+              className="w-full justify-start"
+              onClick={handleSignOut}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
