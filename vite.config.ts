@@ -24,7 +24,7 @@ export default defineConfig(({ mode }) => ({
         name: "Loop Level - Habit Tracker",
         short_name: "Loop Level",
         description: "Build streaks, compete with friends, level up your habits",
-        start_url: "/dashboard",
+        start_url: "/",
         display: "standalone",
         background_color: "#0A0A0A",
         theme_color: "#E50914",
