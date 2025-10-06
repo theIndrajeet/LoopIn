@@ -13,7 +13,7 @@ import {
 import { Bell } from "lucide-react";
 import { toast } from "sonner";
 
-const VAPID_PUBLIC_KEY = "BEB9jLoaJVHPAoui2Y99nSBfSCQBCuu6Ui2rwtJb_SfeJ8uK8DIxucPxtc-s69RwanEILw9Xz-nJ9dqG4OUOA4g";
+const VAPID_PUBLIC_KEY = "BFIC9A-yKEfdoJeTWlBjOSZsLpEX6MQoPt3ygl1wfaEEFn6yKMG5WmkpwLnkSpZ-NSulf2wCJ7XCzRQQZMjqspU";
 
 export const FirstTimeNotificationPrompt = () => {
   const [showPrompt, setShowPrompt] = useState(false);
