@@ -86,7 +86,12 @@ export default function Dashboard() {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error) {
+          console.error('Auth error:', error);
+          navigate('/auth');
+          return;
+        }
         if (user) {
           setUser(user);
           await loadDashboardData(user.id);
@@ -104,6 +109,11 @@ export default function Dashboard() {
 
   // Load dashboard data
   const loadDashboardData = async (userId: string) => {
+    if (!userId) {
+      console.error('No user ID provided to loadDashboardData');
+      return;
+    }
+    
     try {
       setLoading(true);
       
@@ -112,10 +122,13 @@ export default function Dashboard() {
         .from('habits')
         .select('*')
         .eq('user_id', userId)
-        .eq('deleted_at', null)
+        .is('deleted_at', null)
         .order('order_index', { ascending: true });
       
-      if (habitsError) throw habitsError;
+      if (habitsError) {
+        console.error('Error loading habits:', habitsError);
+        throw habitsError;
+      }
       setHabits(habitsData || []);
 
       // Load tasks
@@ -123,10 +136,13 @@ export default function Dashboard() {
         .from('tasks')
         .select('*')
         .eq('user_id', userId)
-        .eq('deleted_at', null)
+        .is('deleted_at', null)
         .order('order_index', { ascending: true });
       
-      if (tasksError) throw tasksError;
+      if (tasksError) {
+        console.error('Error loading tasks:', tasksError);
+        throw tasksError;
+      }
       setTasks(tasksData || []);
       setAllTasks(tasksData || []);
 
@@ -180,8 +196,13 @@ export default function Dashboard() {
         .eq('user_id', userId)
         .gte('created_at', startOfToday.toISOString());
       
-      if (logsError) throw logsError;
-      setTodaysLogs(logsData || []);
+      if (logsError) {
+        console.error('Error loading logs:', logsError);
+        // Don't throw error for logs, just set empty array
+        setTodaysLogs([]);
+      } else {
+        setTodaysLogs(logsData || []);
+      }
 
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -296,7 +317,7 @@ export default function Dashboard() {
   // Handle sign out
   const handleSignOut = async () => {
     try {
-      await supabase.auth.signOut();
+    await supabase.auth.signOut();
       navigate('/auth');
     } catch (error) {
       console.error('Error signing out:', error);
@@ -425,6 +446,77 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Main Navigation */}
+      <div className="border-b border-border bg-card/30 backdrop-blur-sm">
+        <div className="max-w-6xl mx-auto px-4 py-2">
+          <div className="flex items-center justify-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/dashboard')}
+              className="flex items-center gap-2"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Home
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/ai-assistant')}
+              className="flex items-center gap-2"
+            >
+              <Sparkles className="h-4 w-4" />
+              Magic
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/leaderboard')}
+              className="flex items-center gap-2"
+            >
+              <Trophy className="h-4 w-4" />
+              Ranks
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate('/friends')}
+              className="flex items-center gap-2"
+            >
+              <Users className="h-4 w-4" />
+              Friends
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setNotificationsOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <Bell className="h-4 w-4" />
+              Alerts
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setProfileOpen(true)}
+              className="flex items-center gap-2"
+            >
+              <User className="h-4 w-4" />
+              Profile
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="flex items-center gap-2 text-destructive hover:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="max-w-6xl mx-auto p-4">
         {/* Navigation Tabs */}
@@ -433,34 +525,34 @@ export default function Dashboard() {
             <TabsList>
               <TabsTrigger value="habits" className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4" />
-                Habits
-              </TabsTrigger>
+              Habits
+            </TabsTrigger>
               <TabsTrigger value="tasks" className="flex items-center gap-2">
                 <ListTodo className="h-4 w-4" />
-                Tasks
-              </TabsTrigger>
-            </TabsList>
-          </Tabs>
+              Tasks
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
 
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
+                  <Button 
+                    variant="outline" 
               size="sm"
               onClick={() => setSuggestionsOpen(true)}
               className="flex items-center gap-2"
-            >
+                  >
               <Lightbulb className="h-4 w-4" />
               Try this
-            </Button>
+                  </Button>
             <CreateHabitDialog onHabitCreated={() => loadDashboardData(user.id)} />
-          </div>
-        </div>
+                </div>
+            </div>
 
         {/* View Mode Tabs */}
         <div className="flex items-center justify-between mb-6">
           <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as "active" | "trash" | "analytics")}>
             <TabsList>
-              <TabsTrigger value="active">Active</TabsTrigger>
+                <TabsTrigger value="active">Active</TabsTrigger>
               <TabsTrigger value="trash" className="flex items-center gap-2">
                 <Trash2 className="h-4 w-4" />
                 Trash
@@ -469,8 +561,8 @@ export default function Dashboard() {
                 <BarChart3 className="h-4 w-4" />
                 Analytics
               </TabsTrigger>
-            </TabsList>
-          </Tabs>
+              </TabsList>
+            </Tabs>
         </div>
 
         {/* Content */}
@@ -493,7 +585,7 @@ export default function Dashboard() {
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold">No habits yet</h3>
-                        <p className="text-muted-foreground">
+                      <p className="text-muted-foreground">
                           {viewMode === 'trash' 
                             ? "No deleted habits found" 
                             : "Create your first habit to get started!"
@@ -542,15 +634,15 @@ export default function Dashboard() {
                     </SortableContext>
                   </DndContext>
                 )}
-              </div>
-            ) : (
+                  </div>
+                ) : (
               <div className="space-y-4">
                 {filteredTasks.length === 0 ? (
                   <Card className="p-8 text-center">
                     <div className="space-y-4">
                       <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center">
                         <ListTodo className="h-8 w-8 text-muted-foreground" />
-                      </div>
+                        </div>
                       <div>
                         <h3 className="text-lg font-semibold">No tasks yet</h3>
                         <p className="text-muted-foreground">
@@ -604,7 +696,7 @@ export default function Dashboard() {
                 )}
               </div>
             )}
-          </div>
+                    </div>
         )}
 
         {/* Stats Cards */}
@@ -613,42 +705,42 @@ export default function Dashboard() {
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-lg">
                 <Zap className="h-6 w-6 text-primary" />
-              </div>
-              <div>
+                  </div>
+                    <div>
                 <p className="text-2xl font-bold">{totalXP}</p>
                 <p className="text-sm text-muted-foreground">Total XP</p>
-              </div>
-            </div>
-          </Card>
+                    </div>
+                  </div>
+                </Card>
           
           <Card className="p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-orange-500/10 rounded-lg">
                 <Flame className="h-6 w-6 text-orange-500" />
               </div>
-              <div>
+                    <div>
                 <p className="text-2xl font-bold">{activeStreaks}</p>
                 <p className="text-sm text-muted-foreground">Active Streaks</p>
-              </div>
-            </div>
-          </Card>
+                    </div>
+                  </div>
+                </Card>
           
           <Card className="p-6">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-green-500/10 rounded-lg">
                 <CheckCircle2 className="h-6 w-6 text-green-500" />
               </div>
-              <div>
+                    <div>
                 <p className="text-2xl font-bold">{completedTasks}/{totalTasks}</p>
                 <p className="text-sm text-muted-foreground">Tasks Done</p>
+                    </div>
+                  </div>
+                </Card>
               </div>
-            </div>
-          </Card>
-        </div>
       </div>
 
       {/* Quick Picks Modal */}
-      <Sheet open={suggestionsOpen} onOpenChange={setSuggestionsOpen}>
+        <Sheet open={suggestionsOpen} onOpenChange={setSuggestionsOpen}>
         <SheetContent side="right" className="w-80">
           <SheetHeader>
             <SheetTitle>Quick Picks</SheetTitle>
