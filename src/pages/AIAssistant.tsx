@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { ChatMessage } from "@/components/ChatMessage";
 import { ItemPreviewCard } from "@/components/ItemPreviewCard";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Message {
   id: string;
@@ -194,9 +195,9 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-gray-50 dark:bg-black pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-elevated/80 backdrop-blur-heavy border-b border-border/40 shadow-soft">
+      <header className="sticky top-0 z-10 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800">
         <div className="flex items-center gap-3 p-4">
           <Button
             variant="ghost"
@@ -216,27 +217,16 @@ export default function AIAssistant() {
 
       {/* Chat Area */}
       <ScrollArea className="h-[calc(100vh-180px)]">
-        <div className="px-4 py-6 max-w-3xl mx-auto">
+        <div className="px-6 py-4 max-w-2xl mx-auto">
           {messages.length === 0 ? (
-            <div className="text-center py-16 space-y-6 animate-fade-in">
-              <div className="text-5xl mb-2">✨</div>
-              <h2 className="text-2xl font-semibold bg-gradient-to-br from-foreground to-foreground/60 bg-clip-text text-transparent">
+            <div className="text-center py-20 space-y-4 animate-fade-in">
+              <div className="text-6xl mb-4">💬</div>
+              <h2 className="text-xl font-medium text-gray-700 dark:text-gray-300">
                 Start a conversation
               </h2>
-              <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-                I can help you create tasks and habits. Try saying:
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                I can help you create tasks and habits
               </p>
-              <div className="space-y-3 text-sm">
-                <div className="bg-card/50 border border-border/40 rounded-xl px-4 py-3 max-w-sm mx-auto hover:bg-card/70 transition-colors">
-                  "Add buy groceries to my list"
-                </div>
-                <div className="bg-card/50 border border-border/40 rounded-xl px-4 py-3 max-w-sm mx-auto hover:bg-card/70 transition-colors">
-                  "I want to start meditating daily"
-                </div>
-                <div className="bg-card/50 border border-border/40 rounded-xl px-4 py-3 max-w-sm mx-auto hover:bg-card/70 transition-colors">
-                  "Remind me to call mom tomorrow"
-                </div>
-              </div>
             </div>
           ) : (
             <>
@@ -252,11 +242,12 @@ export default function AIAssistant() {
                 />
               ))}
               {isLoading && (
-                <div className="flex items-center gap-3 text-muted-foreground mb-6 animate-pulse">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <div className="flex justify-start mb-2 animate-in slide-in-from-bottom-2 fade-in">
+                  <div className="bg-gray-100 dark:bg-gray-800 rounded-[20px] rounded-bl-[4px] px-4 py-3 flex gap-1.5">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
-                  <span className="text-sm">AI is thinking...</span>
                 </div>
               )}
               <div ref={scrollRef} />
@@ -266,20 +257,26 @@ export default function AIAssistant() {
       </ScrollArea>
 
       {/* Input Area */}
-      <div className="fixed bottom-20 left-0 right-0 bg-elevated/80 backdrop-blur-heavy border-t border-border/40 p-4 shadow-elevated">
-        <div className="max-w-2xl mx-auto flex gap-2">
+      <div className="fixed bottom-20 left-0 right-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 p-4">
+        <div className="max-w-2xl mx-auto relative">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
-            placeholder="Type a message..."
+            placeholder="iMessage"
             disabled={isLoading}
-            className="flex-1"
+            className="w-full rounded-[24px] border-2 border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 py-3 px-5 pr-12 text-[15px] focus-visible:ring-0 focus-visible:border-blue-500"
           />
           <Button
             onClick={handleSendMessage}
             disabled={!input.trim() || isLoading}
             size="icon"
+            className={cn(
+              "absolute right-1.5 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full transition-all",
+              input.trim() 
+                ? "bg-blue-500 hover:bg-blue-600 text-white" 
+                : "bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed"
+            )}
           >
             <Send className="w-4 h-4" />
           </Button>

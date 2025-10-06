@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { Bot } from "lucide-react";
 
 interface Message {
   id: string;
@@ -18,42 +17,37 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
   return (
     <div
       className={cn(
-        "flex w-full mb-6 animate-fade-in",
+        "flex w-full mb-2 animate-in slide-in-from-bottom-2 fade-in duration-300",
         isUser ? "justify-end" : "justify-start"
       )}
     >
-      <div className={cn("flex gap-3 max-w-[85%]", isUser && "flex-row-reverse")}>
-        {/* Avatar */}
-        {!isUser && (
-          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-            <Bot className="w-4 h-4 text-primary" />
-          </div>
-        )}
-
+      <div className="flex flex-col max-w-[65%]">
         {/* Message Bubble */}
         <div
           className={cn(
-            "rounded-2xl px-4 py-3 transition-all duration-300 hover:scale-[1.02]",
+            "px-4 py-2.5 transition-colors duration-200",
             isUser
-              ? "bg-gradient-to-br from-primary to-primary/90 text-primary-foreground shadow-elegant"
-              : "bg-card border border-border/50 text-foreground shadow-soft"
+              ? "bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-[20px] rounded-br-[4px] ml-auto"
+              : "bg-gray-100 dark:bg-gray-800 text-foreground rounded-[20px] rounded-bl-[4px]"
           )}
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+          <p className="text-[15px] leading-[1.4] font-normal whitespace-pre-wrap break-words">
             {message.content}
           </p>
-          <p
-            className={cn(
-              "text-[10px] mt-2 opacity-60",
-              isUser ? "text-primary-foreground/80" : "text-muted-foreground"
-            )}
-          >
-            {message.timestamp.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </p>
         </div>
+        
+        {/* Timestamp */}
+        <p
+          className={cn(
+            "text-[10px] mt-1 text-gray-500 dark:text-gray-400",
+            isUser ? "text-right mr-2" : "ml-2"
+          )}
+        >
+          {message.timestamp.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
       </div>
     </div>
   );
