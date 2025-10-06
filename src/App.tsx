@@ -15,7 +15,7 @@ import { MobileNav } from "@/components/MobileNav";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { FirstTimeNotificationPrompt } from "@/components/FirstTimeNotificationPrompt";
-import { PerformanceMonitor } from "@/components/PerformanceMonitor";
+// import { PerformanceMonitor } from "@/components/PerformanceMonitor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const App = () => (
@@ -26,7 +26,7 @@ const App = () => (
         <Sonner />
         <OfflineIndicator />
         <FirstTimeNotificationPrompt />
-        <PerformanceMonitor />
+          {/* <PerformanceMonitor /> */}
         <main id="main-content">
           <a href="#main-content" className="skip-link">
             Skip to main content
