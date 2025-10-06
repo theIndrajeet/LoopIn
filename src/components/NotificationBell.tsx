@@ -2,7 +2,9 @@ import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotificationsList } from "./NotificationsList";
+import { NotificationSettings } from "./NotificationSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 
@@ -62,11 +64,32 @@ export const NotificationBell = () => {
           )}
         </Button>
       </SheetTrigger>
-      <SheetContent>
+      <SheetContent className="w-full sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Notifications</SheetTitle>
+          <SheetTitle>Alerts</SheetTitle>
         </SheetHeader>
-        <NotificationsList onNotificationRead={fetchUnreadCount} />
+        <Tabs defaultValue="notifications" className="mt-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="notifications" className="relative">
+              Notifications
+              {unreadCount > 0 && (
+                <Badge 
+                  variant="destructive" 
+                  className="ml-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+          <TabsContent value="notifications" className="mt-4">
+            <NotificationsList onNotificationRead={fetchUnreadCount} />
+          </TabsContent>
+          <TabsContent value="settings" className="mt-4">
+            <NotificationSettings />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );

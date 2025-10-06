@@ -1,4 +1,4 @@
-project_id = "hvgzchzobsrnhfvcwpne"
+project_id = "ancmvcwsiamsostpczoy"
 
 [functions.suggest-habits]
 verify_jwt = false

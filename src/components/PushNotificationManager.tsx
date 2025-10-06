@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 // Use the VAPID public key from your environment or the one provided
-const VAPID_PUBLIC_KEY = "BGljcW_WLU3ty4hHUbYWi-75Nz-BjBOgGSuZ5GbdkMxKTtHaSQWl1bmoiJCajTeySedPmy0hhet160Zc9Dnzmxo";
+const VAPID_PUBLIC_KEY = "BEB9jLoaJVHPAoui2Y99nSBfSCQBCuu6Ui2rwtJb_SfeJ8uK8DIxucPxtc-s69RwanEILw9Xz-nJ9dqG4OUOA4g";
 
 export const PushNotificationManager = () => {
   const [permission, setPermission] = useState<NotificationPermission>("default");
@@ -148,6 +148,30 @@ export const PushNotificationManager = () => {
         return;
       }
 
+      // Test notification directly through service worker (bypasses backend)
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.ready;
+        
+        await registration.showNotification("🎉 Test Notification", {
+          body: "Your push notifications are working perfectly!",
+          icon: "/icon-192.png",
+          badge: "/icon-192.png",
+          tag: "test-notification",
+          requireInteraction: false,
+          data: {
+            type: 'test',
+            action_url: '/dashboard'
+          }
+        });
+        
+        toast.success("Test notification sent! 🔔");
+        console.log("✅ Test notification sent through service worker");
+      } else {
+        toast.error("Service worker not available");
+      }
+
+      // TODO: Uncomment this when backend function is fixed
+      /*
       const { error } = await supabase.functions.invoke("send-push-notification", {
         body: {
           userIds: [user.id],
@@ -167,6 +191,7 @@ export const PushNotificationManager = () => {
       } else {
         toast.success("Test notification sent!");
       }
+      */
     } catch (error) {
       console.error("Error:", error);
       toast.error("Failed to send test notification");

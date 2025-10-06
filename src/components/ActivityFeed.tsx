@@ -12,6 +12,27 @@ export const ActivityFeed = () => {
 
   useEffect(() => {
     fetchActivityFeed();
+
+    // Real-time subscription for social events
+    const channel = supabase
+      .channel('activity-feed')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'social_events'
+        },
+        () => {
+          console.log('🔄 Social events updated - refreshing activity feed');
+          fetchActivityFeed();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchActivityFeed = async () => {
@@ -22,7 +43,7 @@ export const ActivityFeed = () => {
         .from('social_events')
         .select(`
           *,
-          profiles!inner(display_name, avatar_url)
+          profiles(display_name, avatar_url)
         `)
         .gte('created_at', seventyTwoHoursAgo)
         .eq('privacy_visible', true)

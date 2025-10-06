@@ -40,6 +40,78 @@ export default function Friends() {
     fetchFriendships();
   }, []);
 
+  // Real-time subscriptions for friends updates
+  useEffect(() => {
+    const setupRealtimeSubscriptions = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+    const channels = [];
+
+    // Real-time friendships updates
+    const friendshipsChannel = supabase
+      .channel('friends-friendships')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friendships',
+          filter: `or(user_id.eq.${user.id},friend_id.eq.${user.id})`
+        },
+        () => {
+          console.log('🔄 Friendships updated - refreshing friends list');
+          fetchFriendships();
+        }
+      )
+      .subscribe();
+
+    // Real-time profiles updates (for friend profile changes)
+    const profilesChannel = supabase
+      .channel('friends-profiles')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles'
+        },
+        () => {
+          console.log('🔄 Friend profiles updated - refreshing friends list');
+          fetchFriendships();
+        }
+      )
+      .subscribe();
+
+    // Real-time social events updates (for activity feed)
+    const socialEventsChannel = supabase
+      .channel('friends-social-events')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'social_events'
+        },
+        () => {
+          console.log('🔄 Social events updated - refreshing activity feed');
+          // Activity feed will auto-refresh due to its own subscription
+        }
+      )
+      .subscribe();
+
+    channels.push(friendshipsChannel, profilesChannel, socialEventsChannel);
+
+    return () => {
+      channels.forEach(channel => {
+        supabase.removeChannel(channel);
+      });
+    };
+  };
+
+  setupRealtimeSubscriptions();
+}, []);
+
   const checkAuth = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
@@ -60,7 +132,7 @@ export default function Friends() {
         .from("friendships")
         .select(`
           friend_id,
-          profiles!friendships_friend_id_fkey(id, display_name, avatar_url, total_xp)
+          profiles(id, display_name, avatar_url, total_xp)
         `)
         .eq("user_id", user.id)
         .eq("status", "accepted");
@@ -73,7 +145,7 @@ export default function Friends() {
         .from("friendships")
         .select(`
           requester_id,
-          profiles!friendships_requester_id_fkey(id, display_name, avatar_url, total_xp)
+          profiles(id, display_name, avatar_url, total_xp)
         `)
         .eq("friend_id", user.id)
         .eq("status", "pending");
@@ -86,7 +158,7 @@ export default function Friends() {
         .from("friendships")
         .select(`
           friend_id,
-          profiles!friendships_friend_id_fkey(id, display_name, avatar_url, total_xp)
+          profiles(id, display_name, avatar_url, total_xp)
         `)
         .eq("requester_id", user.id)
         .eq("status", "pending");

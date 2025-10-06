@@ -1,6 +1,42 @@
-// Push notification service worker handlers
-// This file contains custom push notification logic
+/// <reference lib="webworker" />
+import { clientsClaim } from 'workbox-core';
+import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { registerRoute } from 'workbox-routing';
+import { NetworkFirst } from 'workbox-strategies';
 
+declare const self: ServiceWorkerGlobalScope;
+
+// Immediately claim all clients when the service worker activates
+clientsClaim();
+
+// Clean up any outdated caches from previous versions
+cleanupOutdatedCaches();
+
+// Skip waiting to activate immediately
+self.skipWaiting();
+
+// Precache and serve all the assets managed by Vite build
+precacheAndRoute(self.__WB_MANIFEST);
+
+// Runtime caching for Supabase API calls
+registerRoute(
+  /^https:\/\/hvgzchzobsrnhfvcwpne\.supabase\.co\/.*/i,
+  new NetworkFirst({
+    cacheName: 'supabase-cache',
+    plugins: [
+      {
+        cacheWillUpdate: async ({ response }) => {
+          if (response && response.status === 200) {
+            return response;
+          }
+          return null;
+        },
+      },
+    ],
+  })
+);
+
+// Push notification handler
 self.addEventListener('push', (event) => {
   console.log('Push event received:', event);
 
@@ -38,6 +74,7 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// Notification click handler
 self.addEventListener('notificationclick', (event) => {
   console.log('Notification clicked:', event.notification);
   event.notification.close();
@@ -57,16 +94,29 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if (client.url.includes(self.location.origin) && 'focus' in client) {
           return client.focus().then(() => client.navigate(urlToOpen));
         }
       }
 
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(urlToOpen);
       }
     })
   );
 });
+
+// Log when the service worker is installed
+self.addEventListener('install', () => {
+  console.log('[SW] Service worker installed');
+});
+
+// Log when the service worker is activated
+self.addEventListener('activate', () => {
+  console.log('[SW] Service worker activated');
+});
+
+
+

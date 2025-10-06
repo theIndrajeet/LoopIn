@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { NotificationsList } from "./NotificationsList";
+import { NotificationSettings } from "./NotificationSettings";
 import {
   Sheet,
   SheetContent,
@@ -11,6 +12,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -223,13 +225,32 @@ export const MobileNav = () => {
               <span className="text-[10px] font-medium opacity-60">Alerts</span>
             </button>
           </SheetTrigger>
-          <SheetContent>
+          <SheetContent className="w-full sm:max-w-md">
             <SheetHeader>
-              <SheetTitle>Notifications</SheetTitle>
+              <SheetTitle>Alerts</SheetTitle>
             </SheetHeader>
-            <div className="mt-4">
-              <NotificationsList onNotificationRead={fetchUnreadCount} />
-            </div>
+            <Tabs defaultValue="notifications" className="mt-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="notifications" className="relative">
+                  Notifications
+                  {unreadCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="ml-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="settings">Settings</TabsTrigger>
+              </TabsList>
+              <TabsContent value="notifications" className="mt-4">
+                <NotificationsList onNotificationRead={fetchUnreadCount} />
+              </TabsContent>
+              <TabsContent value="settings" className="mt-4">
+                <NotificationSettings />
+              </TabsContent>
+            </Tabs>
           </SheetContent>
         </Sheet>
         

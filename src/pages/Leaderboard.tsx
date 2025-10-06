@@ -32,24 +32,66 @@ export default function Leaderboard() {
     checkAuth();
     fetchLeaderboards();
     
-    // Real-time updates
-    const channel = supabase
-      .channel('leaderboard-changes')
+    // Real-time updates for leaderboard
+    const channels = [];
+
+    // Listen for profile changes (XP updates)
+    const profilesChannel = supabase
+      .channel('leaderboard-profiles')
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: 'UPDATE',
           schema: 'public',
           table: 'profiles'
         },
         () => {
+          console.log('🔄 Profile updated - refreshing leaderboard');
           fetchLeaderboards();
         }
       )
       .subscribe();
 
+    // Listen for friendship changes
+    const friendshipsChannel = supabase
+      .channel('leaderboard-friendships')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friendships'
+        },
+        () => {
+          console.log('🔄 Friendships updated - refreshing leaderboard');
+          fetchLeaderboards();
+        }
+      )
+      .subscribe();
+
+    // Listen for leaderboard refresh notifications
+    const refreshChannel = supabase
+      .channel('leaderboard-refresh')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'leaderboard_view'
+        },
+        () => {
+          console.log('🔄 Leaderboard view refreshed');
+          fetchLeaderboards();
+        }
+      )
+      .subscribe();
+
+    channels.push(profilesChannel, friendshipsChannel, refreshChannel);
+
     return () => {
-      supabase.removeChannel(channel);
+      channels.forEach(channel => {
+        supabase.removeChannel(channel);
+      });
     };
   }, []);
 
@@ -66,22 +108,16 @@ export default function Leaderboard() {
     try {
       setLoading(true);
 
-      // Fetch global leaderboard (public profiles only)
+      // Fetch global leaderboard using materialized view
       const { data: globalData, error: globalError } = await supabase
-        .from("profiles")
-        .select("id, display_name, avatar_url, total_xp")
-        .eq("privacy_level", "public")
-        .order("total_xp", { ascending: false })
+        .from("leaderboard_view")
+        .select("id, display_name, avatar_url, total_xp, rank")
+        .order("rank", { ascending: true })
         .limit(100);
 
       if (globalError) throw globalError;
 
-      const rankedGlobal = (globalData || []).map((user, index) => ({
-        ...user,
-        rank: index + 1,
-      }));
-
-      setGlobalLeaderboard(rankedGlobal);
+      setGlobalLeaderboard(globalData || []);
 
       // Fetch friends leaderboard
       const { data: { user } } = await supabase.auth.getUser();
